@@ -1,0 +1,137 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: #1f2937;
+  background: linear-gradient(140deg, #eef7ff 0%, #f8fff3 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.layout {
+  width: min(1100px, 100%);
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+}
+
+.auth-card {
+  width: min(420px, 100%);
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+}
+
+button {
+  cursor: pointer;
+  background: #0f766e;
+  color: white;
+  border: none;
+}
+
+button.link {
+  background: transparent;
+  color: #0f766e;
+  padding: 4px;
+}
+
+.muted {
+  color: #64748b;
+  margin: 0;
+}
+
+.list {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.contact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: #f8fafc;
+  color: #1f2937;
+  border: 1px solid #e2e8f0;
+}
+
+.contact.active {
+  border-color: #0f766e;
+  background: #ecfeff;
+}
+
+.entries {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.entry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.inline-form {
+  grid-template-columns: 140px 140px 1fr 100px;
+  align-items: center;
+}
+
+.gave {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.got {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-form {
+    grid-template-columns: 1fr;
+  }
+}
