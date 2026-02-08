@@ -185,7 +185,6 @@ export function Ledger({ userId }: LedgerProps) {
           <div className="home-top">
             <div className="home-header-row">
               <div className="brand-row">
-                <span className="book-icon">|</span>
                 <h2>Krish</h2>
               </div>
               <button className="icon-btn" onClick={signOut} aria-label="Sign out">
