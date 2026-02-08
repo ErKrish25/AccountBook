@@ -68,7 +68,7 @@ export function AuthPanel() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           type="text"
-          placeholder="Username (e.g. krish_01)"
+          placeholder="Username (e.g. Krish_01)"
           autoCapitalize="off"
           autoCorrect="off"
           required
