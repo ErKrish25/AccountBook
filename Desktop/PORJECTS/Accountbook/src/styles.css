@@ -19,13 +19,6 @@ body {
   padding: 24px;
 }
 
-.layout {
-  width: min(1100px, 100%);
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 16px;
-}
-
 .card {
   background: #ffffff;
   border-radius: 16px;
@@ -100,6 +93,14 @@ button.link {
   gap: 8px;
 }
 
+.ledger-shell {
+  width: min(460px, 100%);
+}
+
+.ledger-card h2 {
+  margin: 8px 0 4px;
+}
+
 .contact {
   display: flex;
   justify-content: space-between;
@@ -113,6 +114,16 @@ button.link {
 .contact.active {
   border-color: #0f766e;
   background: #ecfeff;
+}
+
+.party-name-btn {
+  justify-content: flex-start;
+  font-weight: 600;
+}
+
+.balance-pill {
+  margin: 8px 0 14px;
+  font-size: 14px;
 }
 
 .entries {
@@ -135,6 +146,22 @@ button.link {
   align-items: center;
 }
 
+.entry-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.entry-type-toggle button {
+  background: #e2e8f0;
+  color: #1f2937;
+}
+
+.entry-type-toggle button.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
 .gave {
   color: #0f766e;
   font-weight: 700;
@@ -146,11 +173,12 @@ button.link {
 }
 
 @media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
+  .container {
+    padding: 12px;
+    place-items: start stretch;
   }
 
-  .inline-form {
-    grid-template-columns: 1fr;
+  .ledger-shell {
+    width: 100%;
   }
 }

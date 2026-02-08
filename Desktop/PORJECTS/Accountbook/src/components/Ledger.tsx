@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Contact, ContactSummary, Entry, EntryType } from '../types';
+import { Contact, Entry, EntryType } from '../types';
 
 type LedgerProps = {
   userId: string;
@@ -22,19 +22,18 @@ export function Ledger({ userId }: LedgerProps) {
     [entries, selectedContactId]
   );
 
-  const summaries: ContactSummary[] = useMemo(() => {
-    return contacts
-      .map((contact) => {
-        const balance = entries
-          .filter((entry) => entry.contact_id === contact.id)
-          .reduce((total, entry) => {
-            return entry.type === 'gave' ? total + entry.amount : total - entry.amount;
-          }, 0);
+  const selectedContact = useMemo(
+    () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
+    [contacts, selectedContactId]
+  );
 
-        return { ...contact, balance };
-      })
-      .sort((a, b) => b.balance - a.balance);
-  }, [contacts, entries]);
+  const selectedBalance = useMemo(
+    () =>
+      selectedEntries.reduce((total, entry) => {
+        return entry.type === 'gave' ? total + entry.amount : total - entry.amount;
+      }, 0),
+    [selectedEntries]
+  );
 
   useEffect(() => {
     void loadData();
@@ -71,8 +70,8 @@ export function Ledger({ userId }: LedgerProps) {
 
     setContacts(loadedContacts);
     setEntries(loadedEntries);
-    if (!selectedContactId && loadedContacts[0]) {
-      setSelectedContactId(loadedContacts[0].id);
+    if (selectedContactId && !loadedContacts.some((contact) => contact.id === selectedContactId)) {
+      setSelectedContactId('');
     }
     setLoading(false);
   }
@@ -135,93 +134,109 @@ export function Ledger({ userId }: LedgerProps) {
   }
 
   return (
-    <div className="layout">
-      <aside className="card">
-        <div className="row">
-          <h2>Parties</h2>
-          <button className="link" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-
-        <form onSubmit={addContact} className="stack">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Party name"
-            required
-          />
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone (optional)"
-          />
-          <button type="submit">Add party</button>
-        </form>
-
-        <div className="list">
-          {summaries.map((contact) => (
-            <button
-              key={contact.id}
-              className={`contact ${selectedContactId === contact.id ? 'active' : ''}`}
-              onClick={() => setSelectedContactId(contact.id)}
-            >
-              <span>{contact.name}</span>
-              <span className={contact.balance >= 0 ? 'gave' : 'got'}>
-                {contact.balance >= 0 ? '+' : ''}
-                {contact.balance.toFixed(2)}
-              </span>
+    <div className="ledger-shell">
+      {!selectedContact ? (
+        <section className="card ledger-card">
+          <div className="row">
+            <h2>Parties</h2>
+            <button className="link" onClick={signOut}>
+              Sign out
             </button>
-          ))}
-        </div>
-      </aside>
+          </div>
 
-      <main className="card">
-        <h2>Entries</h2>
-        {!selectedContactId ? (
-          <p className="muted">Add a party to start recording entries.</p>
-        ) : (
-          <>
-            <form onSubmit={addEntry} className="stack inline-form">
-              <select value={type} onChange={(e) => setType(e.target.value as EntryType)}>
-                <option value="gave">You gave</option>
-                <option value="got">You got</option>
-              </select>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Amount"
-                required
-              />
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Note"
-              />
-              <button type="submit">Save</button>
-            </form>
+          <form onSubmit={addContact} className="stack">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Party name"
+              required
+            />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone (optional)"
+            />
+            <button type="submit">Add party</button>
+          </form>
 
-            <div className="entries">
-              {selectedEntries.map((entry) => (
-                <div key={entry.id} className="entry-row">
-                  <div>
-                    <strong>{entry.type === 'gave' ? 'You gave' : 'You got'}</strong>
-                    <p className="muted">{entry.note ?? 'No note'}</p>
-                  </div>
-                  <div className={entry.type === 'gave' ? 'gave' : 'got'}>
-                    {entry.type === 'gave' ? '+' : '-'}
-                    {entry.amount.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-              {selectedEntries.length === 0 && <p className="muted">No entries yet.</p>}
+          <div className="list">
+            {contacts.map((contact) => (
+              <button
+                key={contact.id}
+                className="contact party-name-btn"
+                onClick={() => setSelectedContactId(contact.id)}
+              >
+                <span>{contact.name}</span>
+              </button>
+            ))}
+            {contacts.length === 0 && <p className="muted">No parties yet.</p>}
+          </div>
+        </section>
+      ) : (
+        <section className="card ledger-card">
+          <div className="row">
+            <button className="link" onClick={() => setSelectedContactId('')}>
+              Back
+            </button>
+            <button className="link" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+
+          <h2>{selectedContact.name}</h2>
+          {selectedContact.phone && <p className="muted">{selectedContact.phone}</p>}
+          <p className={`balance-pill ${selectedBalance >= 0 ? 'gave' : 'got'}`}>
+            Balance: {selectedBalance >= 0 ? '+' : ''}
+            {selectedBalance.toFixed(2)}
+          </p>
+
+          <form onSubmit={addEntry} className="stack">
+            <div className="entry-type-toggle">
+              <button
+                type="button"
+                className={type === 'gave' ? 'active' : ''}
+                onClick={() => setType('gave')}
+              >
+                You gave
+              </button>
+              <button
+                type="button"
+                className={type === 'got' ? 'active' : ''}
+                onClick={() => setType('got')}
+              >
+                You got
+              </button>
             </div>
-          </>
-        )}
-      </main>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Amount"
+              required
+            />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note" />
+            <button type="submit">Save entry</button>
+          </form>
+
+          <div className="entries">
+            {selectedEntries.map((entry) => (
+              <div key={entry.id} className="entry-row">
+                <div>
+                  <strong>{entry.type === 'gave' ? 'You gave' : 'You got'}</strong>
+                  <p className="muted">{entry.note ?? 'No note'}</p>
+                </div>
+                <div className={entry.type === 'gave' ? 'gave' : 'got'}>
+                  {entry.type === 'gave' ? '+' : '-'}
+                  {entry.amount.toFixed(2)}
+                </div>
+              </div>
+            ))}
+            {selectedEntries.length === 0 && <p className="muted">No entries yet.</p>}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
