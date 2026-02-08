@@ -60,8 +60,8 @@ export function AuthPanel() {
 
   return (
     <div className="card auth-card">
-      <h1>Accountbook</h1>
-      <p className="muted">Track who you gave and who you got from.</p>
+      <h1 className="auth-title">Accountbook</h1>
+      <p className="muted auth-subtitle">Track who you gave and who you got from.</p>
       <p className="muted">{isSignUp ? 'Create account' : 'Sign in'}</p>
       <form onSubmit={handleSubmit} className="stack">
         <input

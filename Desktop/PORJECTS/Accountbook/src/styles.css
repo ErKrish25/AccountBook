@@ -37,6 +37,15 @@ body {
   width: min(420px, 100%);
 }
 
+.auth-title {
+  margin: 0;
+}
+
+.auth-subtitle {
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
 .stack {
   display: grid;
   gap: 10px;
