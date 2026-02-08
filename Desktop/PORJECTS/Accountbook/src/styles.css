@@ -518,6 +518,30 @@ button.link {
   background: #0a8a4a;
 }
 
+.entry-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 40;
+  padding: 16px;
+}
+
+.entry-edit-modal {
+  width: min(380px, 100%);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+}
+
+.entry-edit-modal h4 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #1f2937;
+}
+
 .contact {
   display: flex;
   justify-content: space-between;

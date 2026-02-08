@@ -15,6 +15,12 @@ export function Ledger({ userId }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
+  const [editEntryDraft, setEditEntryDraft] = useState<{
+    id: string;
+    amount: string;
+    note: string;
+    type: EntryType;
+  } | null>(null);
 
   const selectedEntries = useMemo(
     () => entries.filter((entry) => entry.contact_id === selectedContactId),
@@ -233,24 +239,21 @@ export function Ledger({ userId }: LedgerProps) {
     await loadData();
   }
 
-  async function editEntry(entry: Entry) {
-    const amountInput = window.prompt('Edit amount', String(entry.amount));
-    if (amountInput === null) return;
+  function editEntry(entry: Entry) {
+    setEditEntryDraft({
+      id: entry.id,
+      amount: String(entry.amount),
+      note: entry.note ?? '',
+      type: entry.type,
+    });
+  }
 
-    const parsedAmount = Number(amountInput);
+  async function saveEditedEntry() {
+    if (!editEntryDraft) return;
+
+    const parsedAmount = Number(editEntryDraft.amount);
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Enter a valid amount');
-      return;
-    }
-
-    const noteInput = window.prompt('Edit note (optional)', entry.note ?? '');
-    if (noteInput === null) return;
-
-    const typeInput = window.prompt('Type: enter "gave" or "got"', entry.type);
-    if (typeInput === null) return;
-    const normalizedType = typeInput.trim().toLowerCase();
-    if (normalizedType !== 'gave' && normalizedType !== 'got') {
-      alert('Type must be "gave" or "got".');
       return;
     }
 
@@ -258,10 +261,10 @@ export function Ledger({ userId }: LedgerProps) {
       .from('entries')
       .update({
         amount: parsedAmount,
-        note: noteInput.trim() || null,
-        type: normalizedType,
+        note: editEntryDraft.note.trim() || null,
+        type: editEntryDraft.type,
       })
-      .eq('id', entry.id)
+      .eq('id', editEntryDraft.id)
       .eq('owner_id', userId);
 
     if (error) {
@@ -269,6 +272,7 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
+    setEditEntryDraft(null);
     await loadData();
   }
 
@@ -462,7 +466,7 @@ export function Ledger({ userId }: LedgerProps) {
                     <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
                     <strong>{entry.note ?? 'No note'}</strong>
                     <div className="entry-item-actions">
-                      <button type="button" onClick={() => void editEntry(entry)}>
+                      <button type="button" onClick={() => editEntry(entry)}>
                         Edit
                       </button>
                       <button type="button" className="danger" onClick={() => void deleteEntry(entry)}>
@@ -492,6 +496,55 @@ export function Ledger({ userId }: LedgerProps) {
               YOU GOT ₹
             </button>
           </div>
+
+          {editEntryDraft && (
+            <div className="entry-edit-overlay">
+              <form
+                className="entry-edit-modal stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveEditedEntry();
+                }}
+              >
+                <h4>Edit Entry</h4>
+                <input
+                  value={editEntryDraft.amount}
+                  onChange={(e) =>
+                    setEditEntryDraft((draft) => (draft ? { ...draft, amount: e.target.value } : draft))
+                  }
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Amount"
+                  required
+                />
+                <input
+                  value={editEntryDraft.note}
+                  onChange={(e) =>
+                    setEditEntryDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
+                  }
+                  placeholder="Note (optional)"
+                />
+                <select
+                  value={editEntryDraft.type}
+                  onChange={(e) =>
+                    setEditEntryDraft((draft) =>
+                      draft ? { ...draft, type: e.target.value as EntryType } : draft
+                    )
+                  }
+                >
+                  <option value="gave">You gave</option>
+                  <option value="got">You got</option>
+                </select>
+                <div className="row">
+                  <button type="button" className="link" onClick={() => setEditEntryDraft(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit">Save</button>
+                </div>
+              </form>
+            </div>
+          )}
         </section>
       )}
     </div>
