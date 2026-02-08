@@ -222,18 +222,6 @@ export function Ledger({ userId }: LedgerProps) {
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search Customer"
               />
-              <button className="icon-btn" type="button" aria-label="Sort">
-                ⇅
-              </button>
-              <button className="icon-btn" type="button" aria-label="PDF">
-                PDF
-              </button>
-            </div>
-
-            <div className="summary-inline">
-              <span>Total: {totals.totalBalance >= 0 ? '+' : ''}{totals.totalBalance.toFixed(2)}</span>
-              <span className="gave">Get: +{totals.youHaveToGet.toFixed(2)}</span>
-              <span className="got">Give: -{totals.youHaveToGive.toFixed(2)}</span>
             </div>
 
             <div className="party-list">
@@ -284,11 +272,6 @@ export function Ledger({ userId }: LedgerProps) {
             <button className="fab-add" onClick={() => setShowAddPartyForm(true)}>
               + Add Customer
             </button>
-
-            <div className="bottom-nav">
-              <button className="active">HOME</button>
-              <button>MORE</button>
-            </div>
           </div>
         </section>
       ) : (
