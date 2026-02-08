@@ -9,15 +9,24 @@ export function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load auth session', error);
+        setSession(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -32,7 +41,7 @@ export function App() {
       ? session.user.email.split('@')[0]
       : null;
   const displayName =
-    usernameFromEmail || (session?.user.user_metadata?.username as string | undefined) || 'User';
+    (session?.user.user_metadata?.username as string | undefined) || usernameFromEmail || 'User';
 
   return (
     <div className={`container ${session?.user ? 'app-container' : 'auth-container'}`}>

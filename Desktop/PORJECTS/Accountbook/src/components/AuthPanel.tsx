@@ -11,7 +11,7 @@ function normalizeUsername(value: string): string | null {
   const cleaned = value.trim();
   if (!USERNAME_REGEX.test(cleaned)) return null;
 
-  return cleaned.toLowerCase();
+  return cleaned;
 }
 
 export function AuthPanel() {
@@ -33,7 +33,15 @@ export function AuthPanel() {
     const email = usernameToEmail(normalizedUsername);
 
     const action = isSignUp
-      ? supabase.auth.signUp({ email, password })
+      ? supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: normalizedUsername,
+            },
+          },
+        })
       : supabase.auth.signInWithPassword({ email, password });
 
     const { error } = await action;
