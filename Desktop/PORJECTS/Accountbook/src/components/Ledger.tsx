@@ -90,41 +90,47 @@ export function Ledger({ userId }: LedgerProps) {
     void loadData();
   }, []);
 
-  async function loadData() {
-    setLoading(true);
-
-    const [{ data: contactRows, error: contactError }, { data: entryRows, error: entryError }] =
-      await Promise.all([
-        supabase
-          .from('contacts')
-          .select('*')
-          .eq('owner_id', userId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('entries')
-          .select('*')
-          .eq('owner_id', userId)
-          .order('created_at', { ascending: false }),
-      ]);
-
-    if (contactError || entryError) {
-      alert(contactError?.message ?? entryError?.message ?? 'Failed to load data');
-      setLoading(false);
-      return;
+  async function loadData(silent = false) {
+    if (!silent) {
+      setLoading(true);
     }
 
-    const loadedContacts = (contactRows ?? []) as Contact[];
-    const loadedEntries = (entryRows ?? []).map((entry) => ({
-      ...entry,
-      amount: Number(entry.amount),
-    })) as Entry[];
+    try {
+      const [{ data: contactRows, error: contactError }, { data: entryRows, error: entryError }] =
+        await Promise.all([
+          supabase
+            .from('contacts')
+            .select('*')
+            .eq('owner_id', userId)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('entries')
+            .select('*')
+            .eq('owner_id', userId)
+            .order('created_at', { ascending: false }),
+        ]);
 
-    setContacts(loadedContacts);
-    setEntries(loadedEntries);
-    if (selectedContactId && !loadedContacts.some((contact) => contact.id === selectedContactId)) {
-      setSelectedContactId('');
+      if (contactError || entryError) {
+        alert(contactError?.message ?? entryError?.message ?? 'Failed to load data');
+        return;
+      }
+
+      const loadedContacts = (contactRows ?? []) as Contact[];
+      const loadedEntries = (entryRows ?? []).map((entry) => ({
+        ...entry,
+        amount: Number(entry.amount),
+      })) as Entry[];
+
+      setContacts(loadedContacts);
+      setEntries(loadedEntries);
+      if (selectedContactId && !loadedContacts.some((contact) => contact.id === selectedContactId)) {
+        setSelectedContactId('');
+      }
+    } finally {
+      if (!silent) {
+        setLoading(false);
+      }
     }
-    setLoading(false);
   }
 
   async function addContact(e: FormEvent) {
@@ -145,7 +151,7 @@ export function Ledger({ userId }: LedgerProps) {
     setName('');
     setPhone('');
     setShowAddPartyForm(false);
-    await loadData();
+    await loadData(true);
   }
 
   async function addEntry(entryType: EntryType) {
@@ -178,7 +184,7 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
-    await loadData();
+    await loadData(true);
   }
 
   async function signOut() {
@@ -213,7 +219,7 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
-    await loadData();
+    await loadData(true);
   }
 
   async function deleteSelectedContact() {
@@ -236,7 +242,7 @@ export function Ledger({ userId }: LedgerProps) {
     }
 
     setSelectedContactId('');
-    await loadData();
+    await loadData(true);
   }
 
   function editEntry(entry: Entry) {
@@ -273,7 +279,7 @@ export function Ledger({ userId }: LedgerProps) {
     }
 
     setEditEntryDraft(null);
-    await loadData();
+    await loadData(true);
   }
 
   async function deleteEntry(entry: Entry) {
@@ -291,7 +297,7 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
-    await loadData();
+    await loadData(true);
   }
 
   function formatRelativeTime(value: string): string {
