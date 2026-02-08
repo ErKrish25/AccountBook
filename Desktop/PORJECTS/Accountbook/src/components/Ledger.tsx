@@ -26,6 +26,7 @@ export function Ledger({ userId }: LedgerProps) {
     amount: string;
     note: string;
     type: EntryType;
+    entryDate: string;
   } | null>(null);
 
   const selectedEntries = useMemo(
@@ -260,6 +261,7 @@ export function Ledger({ userId }: LedgerProps) {
       amount: String(entry.amount),
       note: entry.note ?? '',
       type: entry.type,
+      entryDate: entry.entry_date,
     });
   }
 
@@ -278,6 +280,7 @@ export function Ledger({ userId }: LedgerProps) {
         amount: parsedAmount,
         note: editEntryDraft.note.trim() || null,
         type: editEntryDraft.type,
+        entry_date: editEntryDraft.entryDate,
       })
       .eq('id', editEntryDraft.id)
       .eq('owner_id', userId);
@@ -594,6 +597,16 @@ export function Ledger({ userId }: LedgerProps) {
                   <option value="gave">You gave</option>
                   <option value="got">You got</option>
                 </select>
+                <input
+                  type="date"
+                  value={editEntryDraft.entryDate}
+                  onChange={(e) =>
+                    setEditEntryDraft((draft) =>
+                      draft ? { ...draft, entryDate: e.target.value } : draft
+                    )
+                  }
+                  required
+                />
                 <div className="row">
                   <button type="button" className="link" onClick={() => setEditEntryDraft(null)}>
                     Cancel
