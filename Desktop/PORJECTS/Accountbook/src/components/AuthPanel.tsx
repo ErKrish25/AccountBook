@@ -62,6 +62,13 @@ export function AuthPanel() {
       setIsSignUp(false);
       setPassword('');
     } else {
+      // Keep dashboard header exactly as user typed on latest login.
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { username: normalizedUsername },
+      });
+      if (updateError) {
+        console.error('Failed to update username casing in metadata', updateError);
+      }
       setMessage('Signed in.');
     }
   }
