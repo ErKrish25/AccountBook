@@ -14,15 +14,9 @@ function normalizeUsername(value: string): string | null {
   return cleaned.toLowerCase();
 }
 
-function normalizePhonePassword(value: string): string | null {
-  const digits = value.replace(/\D/g, '');
-  return digits.length >= 6 ? digits : null;
-}
-
 export function AuthPanel() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneForPassword, setPhoneForPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -39,27 +33,8 @@ export function AuthPanel() {
     const email = usernameToEmail(normalizedUsername);
 
     const action = isSignUp
-      ? (() => {
-          const normalizedPhone = normalizePhonePassword(phoneForPassword);
-          if (!normalizedPhone) {
-            setMessage('Enter a valid phone number (at least 6 digits).');
-            return null;
-          }
-          return supabase.auth.signUp({
-            email,
-            password: normalizedPhone,
-            options: {
-              data: {
-                phone: phoneForPassword.trim() || null,
-              },
-            },
-          });
-        })()
+      ? supabase.auth.signUp({ email, password })
       : supabase.auth.signInWithPassword({ email, password });
-
-    if (!action) {
-      return;
-    }
 
     const { error } = await action;
     if (error) {
@@ -75,10 +50,9 @@ export function AuthPanel() {
       // Force explicit login after sign-up.
       await supabase.auth.signOut();
       alert('Account successfully created. Please sign in.');
-      setMessage('Account created. Sign in using your username and phone number as password.');
+      setMessage('Account created. Please sign in with your username and password.');
       setIsSignUp(false);
       setPassword('');
-      setPhoneForPassword('');
     } else {
       setMessage('Signed in.');
     }
@@ -99,24 +73,14 @@ export function AuthPanel() {
           autoCorrect="off"
           required
         />
-        {isSignUp ? (
-          <input
-            value={phoneForPassword}
-            onChange={(e) => setPhoneForPassword(e.target.value)}
-            type="tel"
-            placeholder="Phone number (used as password)"
-            required
-          />
-        ) : (
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="Password"
-            minLength={6}
-            required
-          />
-        )}
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          placeholder="Password (min 6 chars)"
+          minLength={6}
+          required
+        />
         <button type="submit">{isSignUp ? 'Create account' : 'Sign in'}</button>
       </form>
       <button className="link" onClick={() => setIsSignUp((s) => !s)}>
