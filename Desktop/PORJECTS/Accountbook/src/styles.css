@@ -1,9 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #eef3f7;
-  --surface: #fcfdff;
-  --surface-soft: #f3f7fb;
+  --bg: #f7fbff;
+  --surface: #ffffff;
+  --surface-soft: #f8fbff;
   --text: #172033;
   --text-muted: #66758f;
   --border: #d8e1ec;
@@ -25,8 +25,9 @@ body {
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 12% 9%, #f8fbff 0%, transparent 36%),
-    radial-gradient(circle at 90% 0%, #e7f3ff 0%, transparent 34%),
+    radial-gradient(circle at 12% 9%, #ffffff 0%, transparent 38%),
+    radial-gradient(circle at 90% 0%, #eef7ff 0%, transparent 36%),
+    radial-gradient(circle at 50% 100%, #f9fdff 0%, transparent 32%),
     var(--bg);
 }
 
@@ -47,7 +48,7 @@ body {
 }
 
 .card {
-  background: rgba(252, 253, 255, 0.95);
+  background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(216, 225, 236, 0.92);
   border-radius: var(--radius-lg);
   padding: 22px;
@@ -148,7 +149,7 @@ button.link {
 
 .ledger-home {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f2f6fb 0%, #eef2f7 100%);
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f6fc 100%);
 }
 
 .home-top {
@@ -179,7 +180,7 @@ button.link {
 
 .summary-card {
   margin-top: 14px;
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(255, 255, 255, 0.99);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 16px;
   overflow: hidden;
@@ -215,7 +216,7 @@ button.link {
   margin: 0 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 4px 18px rgba(30, 58, 108, 0.05);
+  box-shadow: 0 6px 22px rgba(30, 58, 108, 0.07);
 }
 
 .search-row input {
@@ -254,7 +255,7 @@ button.link {
   border: 1px solid var(--border);
   padding: 10px 12px;
   background: #ffffff;
-  box-shadow: 0 6px 20px rgba(27, 53, 97, 0.04);
+  box-shadow: 0 8px 24px rgba(27, 53, 97, 0.06);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -371,7 +372,7 @@ button.link {
 
 .ledger-detail {
   min-height: 100vh;
-  background: linear-gradient(180deg, #edf1f5 0%, #ebeff4 100%);
+  background: linear-gradient(180deg, #f6f9fd 0%, #eff4fa 100%);
 }
 
 .detail-top {
