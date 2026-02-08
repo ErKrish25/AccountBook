@@ -28,7 +28,7 @@ export function App() {
   }
 
   return (
-    <div className="container">
+    <div className={`container ${session?.user ? 'app-container' : 'auth-container'}`}>
       {session?.user ? <Ledger userId={session.user.id} /> : <AuthPanel />}
     </div>
   );
