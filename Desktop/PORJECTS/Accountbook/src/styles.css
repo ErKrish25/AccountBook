@@ -136,6 +136,10 @@ button.link {
   font-weight: 600;
 }
 
+.auth-card > button.link {
+  margin-top: 8px;
+}
+
 .muted {
   color: var(--text-muted);
   margin: 0;
