@@ -13,6 +13,8 @@ export function Ledger({ userId }: LedgerProps) {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [showAddPartyForm, setShowAddPartyForm] = useState(false);
   const [type, setType] = useState<EntryType>('gave');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -51,6 +53,13 @@ export function Ledger({ userId }: LedgerProps) {
     const totalBalance = youHaveToGet - youHaveToGive;
     return { totalBalance, youHaveToGet, youHaveToGive };
   }, [contactBalances]);
+
+  const filteredContacts = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    if (!query) return contactBalances;
+
+    return contactBalances.filter((contact) => contact.name.toLowerCase().includes(query));
+  }, [contactBalances, searchText]);
 
   const selectedBalance = useMemo(
     () =>
@@ -118,6 +127,7 @@ export function Ledger({ userId }: LedgerProps) {
 
     setName('');
     setPhone('');
+    setShowAddPartyForm(false);
     await loadData();
   }
 
@@ -154,6 +164,16 @@ export function Ledger({ userId }: LedgerProps) {
     await supabase.auth.signOut();
   }
 
+  function formatRelativeTime(value: string): string {
+    const diffMs = Date.now() - new Date(value).getTime();
+    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hours ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days} days ago`;
+  }
+
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -161,62 +181,116 @@ export function Ledger({ userId }: LedgerProps) {
   return (
     <div className="ledger-shell">
       {!selectedContact ? (
-        <section className="card ledger-card">
-          <div className="row">
-            <h2>Parties</h2>
-            <button className="link" onClick={signOut}>
-              Sign out
-            </button>
-          </div>
-
-          <form onSubmit={addContact} className="stack">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Party name"
-              required
-            />
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Phone (optional)"
-            />
-            <button type="submit">Add party</button>
-          </form>
-
-          <div className="summary-grid">
-            <div className="summary-item">
-              <p className="muted">Total Balance</p>
-              <strong className={totals.totalBalance >= 0 ? 'gave' : 'got'}>
-                {totals.totalBalance >= 0 ? '+' : ''}
-                {totals.totalBalance.toFixed(2)}
-              </strong>
-            </div>
-            <div className="summary-item">
-              <p className="muted">You Have to Get</p>
-              <strong className="gave">+{totals.youHaveToGet.toFixed(2)}</strong>
-            </div>
-            <div className="summary-item">
-              <p className="muted">You Have to Give</p>
-              <strong className="got">-{totals.youHaveToGive.toFixed(2)}</strong>
-            </div>
-          </div>
-
-          <div className="list">
-            {contactBalances.map((contact) => (
-              <button
-                key={contact.id}
-                className="contact party-name-btn"
-                onClick={() => setSelectedContactId(contact.id)}
-              >
-                <span>{contact.name}</span>
-                <span className={contact.balance >= 0 ? 'gave' : 'got'}>
-                  {contact.balance >= 0 ? '+' : ''}
-                  {contact.balance.toFixed(2)}
-                </span>
+        <section className="ledger-home">
+          <div className="home-top">
+            <div className="home-header-row">
+              <div className="brand-row">
+                <span className="book-icon">|</span>
+                <h2>Krish</h2>
+              </div>
+              <button className="icon-btn" onClick={signOut} aria-label="Sign out">
+                ↦
               </button>
-            ))}
-            {contacts.length === 0 && <p className="muted">No parties yet.</p>}
+            </div>
+
+            <div className="tab-row">
+              <button className="tab-btn active">Customers</button>
+              <button className="tab-btn">Suppliers</button>
+              <span className="tab-new">NEW</span>
+            </div>
+
+            <div className="summary-card">
+              <div className="summary-stats">
+                <div>
+                  <p className="muted">You will give</p>
+                  <strong className="gave">₹{totals.youHaveToGive.toFixed(0)}</strong>
+                </div>
+                <div>
+                  <p className="muted">You will get</p>
+                  <strong className="get-blue">₹{totals.youHaveToGet.toFixed(0)}</strong>
+                </div>
+              </div>
+              <div className="summary-actions">
+                <span>VIEW REPORT</span>
+                <span>OPEN CASHBOOK</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="home-body">
+            <div className="search-row">
+              <input
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search Customer"
+              />
+              <button className="icon-btn" type="button" aria-label="Sort">
+                ⇅
+              </button>
+              <button className="icon-btn" type="button" aria-label="PDF">
+                PDF
+              </button>
+            </div>
+
+            <div className="summary-inline">
+              <span>Total: {totals.totalBalance >= 0 ? '+' : ''}{totals.totalBalance.toFixed(2)}</span>
+              <span className="gave">Get: +{totals.youHaveToGet.toFixed(2)}</span>
+              <span className="got">Give: -{totals.youHaveToGive.toFixed(2)}</span>
+            </div>
+
+            <div className="party-list">
+              {filteredContacts.map((contact) => (
+                <button
+                  key={contact.id}
+                  className="party-row"
+                  onClick={() => setSelectedContactId(contact.id)}
+                >
+                  <div className="party-avatar">{contact.name[0]?.toUpperCase() ?? '?'}</div>
+                  <div className="party-main">
+                    <strong>{contact.name}</strong>
+                    <p className="muted">{formatRelativeTime(contact.created_at)}</p>
+                  </div>
+                  <div className="party-balance">
+                    <strong className={contact.balance >= 0 ? 'gave' : 'got'}>
+                      ₹{Math.abs(contact.balance).toFixed(0)}
+                    </strong>
+                    <p className="muted">{contact.balance >= 0 ? "You'll Get" : "You'll Give"}</p>
+                  </div>
+                </button>
+              ))}
+              {filteredContacts.length === 0 && <p className="muted empty-text">No parties found.</p>}
+            </div>
+
+            {showAddPartyForm && (
+              <form onSubmit={addContact} className="add-party-sheet stack">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Party name"
+                  required
+                />
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Phone (optional)"
+                />
+                <div className="row">
+                  <button type="button" className="link" onClick={() => setShowAddPartyForm(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit">Save</button>
+                </div>
+              </form>
+            )}
+
+            <button className="fab-add" onClick={() => setShowAddPartyForm(true)}>
+              + Add Customer
+            </button>
+
+            <div className="bottom-nav">
+              <button className="active">HOME</button>
+              <button>MORE</button>
+            </div>
           </div>
         </section>
       ) : (
