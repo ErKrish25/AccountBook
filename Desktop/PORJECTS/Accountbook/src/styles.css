@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --text: #111827;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --brand-1: #1f2937;
-  --brand-2: #374151;
-  --success: #0f766e;
-  --danger: #b91c1c;
-  --accent: #2563eb;
+  --bg: #f7f1e8;
+  --surface: #fffdf9;
+  --surface-soft: #f5efe4;
+  --text: #2a241d;
+  --text-muted: #7b6f62;
+  --border: #e5d8c8;
+  --brand-1: #7a3a2f;
+  --brand-2: #b06a3f;
+  --success: #1e7a56;
+  --danger: #ba3434;
+  --accent: #a65a2a;
   --radius-lg: 18px;
   --radius-md: 12px;
 }
@@ -25,8 +25,8 @@ body {
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 10% 10%, #ffffff 0%, transparent 36%),
-    radial-gradient(circle at 90% 0%, #eef2ff 0%, transparent 34%),
+    radial-gradient(circle at 12% 9%, #fff8ee 0%, transparent 36%),
+    radial-gradient(circle at 90% 0%, #f7ece1 0%, transparent 34%),
     var(--bg);
 }
 
@@ -47,11 +47,11 @@ body {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(217, 225, 236, 0.8);
+  background: rgba(255, 253, 249, 0.95);
+  border: 1px solid rgba(229, 216, 200, 0.92);
   border-radius: var(--radius-lg);
   padding: 22px;
-  box-shadow: 0 22px 45px rgba(19, 35, 69, 0.08);
+  box-shadow: 0 20px 40px rgba(85, 54, 30, 0.12);
   backdrop-filter: blur(4px);
 }
 
@@ -113,15 +113,15 @@ select {
 input:focus,
 select:focus {
   outline: none;
-  border-color: #7fb49e;
-  box-shadow: 0 0 0 3px rgba(30, 122, 102, 0.15);
+  border-color: #d19b6e;
+  box-shadow: 0 0 0 3px rgba(176, 106, 63, 0.17);
 }
 
 button {
   cursor: pointer;
   border: none;
   padding: 11px 14px;
-  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  background: linear-gradient(135deg, #8a3e31 0%, #b06a3f 100%);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -129,7 +129,7 @@ button {
 
 button.link {
   background: transparent;
-  color: #1f2937;
+  color: #8a3e31;
   padding: 4px;
   font-weight: 600;
 }
@@ -153,13 +153,13 @@ button.link {
 .home-top {
   background:
     radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.18) 0%, transparent 32%),
-    linear-gradient(140deg, #1f2937 0%, #2b3646 52%, #374151 100%);
+    linear-gradient(140deg, #7a3a2f 0%, #9b5535 45%, #b06a3f 100%);
   color: #ffffff;
   padding: 17px 15px 18px;
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   box-shadow:
-    0 14px 34px rgba(17, 24, 39, 0.26),
+    0 14px 34px rgba(122, 58, 47, 0.35),
     inset 0 -1px 0 rgba(255, 255, 255, 0.15);
 }
 
@@ -183,7 +183,7 @@ button.link {
   border-radius: 16px;
   overflow: hidden;
   color: #52617d;
-  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
+  box-shadow: 0 10px 24px rgba(122, 74, 36, 0.16);
 }
 
 .summary-stats {
@@ -233,7 +233,7 @@ button.link {
   background: transparent;
   border: none;
   padding: 6px;
-  color: var(--brand-2);
+  color: #9b5535;
   font-size: 16px;
 }
 
@@ -269,7 +269,7 @@ button.link {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #4b5563 0%, #6b7280 100%);
+  background: linear-gradient(140deg, #9b5535 0%, #c98755 100%);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -361,11 +361,11 @@ button.link {
   z-index: 14;
   border-radius: 999px;
   padding: 11px 22px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #8f3a32 0%, #ba3434 100%);
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.34);
+  box-shadow: 0 12px 24px rgba(143, 58, 50, 0.34);
 }
 
 .ledger-detail {
@@ -376,10 +376,10 @@ button.link {
 .detail-top {
   background:
     radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.16) 0%, transparent 30%),
-    linear-gradient(140deg, #1f2937 0%, #2b3646 52%, #374151 100%);
+    linear-gradient(140deg, #7a3a2f 0%, #9b5535 45%, #b06a3f 100%);
   padding: 13px 11px 15px;
   box-shadow:
-    0 12px 26px rgba(17, 24, 39, 0.24),
+    0 12px 26px rgba(122, 58, 47, 0.3),
     inset 0 -1px 0 rgba(255, 255, 255, 0.14);
 }
 
@@ -582,7 +582,7 @@ button.link {
 }
 
 .get-action-btn {
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  background: linear-gradient(135deg, #1e7a56 0%, #2e9b70 100%);
 }
 
 .entry-edit-overlay {
