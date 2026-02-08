@@ -93,6 +93,22 @@ button.link {
   gap: 8px;
 }
 
+.summary-grid {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.summary-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .ledger-shell {
   width: min(460px, 100%);
 }

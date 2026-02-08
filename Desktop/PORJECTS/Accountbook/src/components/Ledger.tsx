@@ -27,6 +27,31 @@ export function Ledger({ userId }: LedgerProps) {
     [contacts, selectedContactId]
   );
 
+  const contactBalances = useMemo(() => {
+    return contacts.map((contact) => {
+      const balance = entries
+        .filter((entry) => entry.contact_id === contact.id)
+        .reduce((total, entry) => {
+          return entry.type === 'gave' ? total + entry.amount : total - entry.amount;
+        }, 0);
+
+      return { ...contact, balance };
+    });
+  }, [contacts, entries]);
+
+  const totals = useMemo(() => {
+    const youHaveToGet = contactBalances
+      .filter((contact) => contact.balance > 0)
+      .reduce((total, contact) => total + contact.balance, 0);
+
+    const youHaveToGive = contactBalances
+      .filter((contact) => contact.balance < 0)
+      .reduce((total, contact) => total + Math.abs(contact.balance), 0);
+
+    const totalBalance = youHaveToGet - youHaveToGive;
+    return { totalBalance, youHaveToGet, youHaveToGive };
+  }, [contactBalances]);
+
   const selectedBalance = useMemo(
     () =>
       selectedEntries.reduce((total, entry) => {
@@ -159,14 +184,36 @@ export function Ledger({ userId }: LedgerProps) {
             <button type="submit">Add party</button>
           </form>
 
+          <div className="summary-grid">
+            <div className="summary-item">
+              <p className="muted">Total Balance</p>
+              <strong className={totals.totalBalance >= 0 ? 'gave' : 'got'}>
+                {totals.totalBalance >= 0 ? '+' : ''}
+                {totals.totalBalance.toFixed(2)}
+              </strong>
+            </div>
+            <div className="summary-item">
+              <p className="muted">You Have to Get</p>
+              <strong className="gave">+{totals.youHaveToGet.toFixed(2)}</strong>
+            </div>
+            <div className="summary-item">
+              <p className="muted">You Have to Give</p>
+              <strong className="got">-{totals.youHaveToGive.toFixed(2)}</strong>
+            </div>
+          </div>
+
           <div className="list">
-            {contacts.map((contact) => (
+            {contactBalances.map((contact) => (
               <button
                 key={contact.id}
                 className="contact party-name-btn"
                 onClick={() => setSelectedContactId(contact.id)}
               >
                 <span>{contact.name}</span>
+                <span className={contact.balance >= 0 ? 'gave' : 'got'}>
+                  {contact.balance >= 0 ? '+' : ''}
+                  {contact.balance.toFixed(2)}
+                </span>
               </button>
             ))}
             {contacts.length === 0 && <p className="muted">No parties yet.</p>}
