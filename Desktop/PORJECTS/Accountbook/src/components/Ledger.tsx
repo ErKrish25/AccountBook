@@ -195,8 +195,6 @@ export function Ledger({ userId }: LedgerProps) {
 
             <div className="tab-row">
               <button className="tab-btn active">Customers</button>
-              <button className="tab-btn">Suppliers</button>
-              <span className="tab-new">NEW</span>
             </div>
 
             <div className="summary-card">
