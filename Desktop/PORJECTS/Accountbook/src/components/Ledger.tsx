@@ -4,9 +4,10 @@ import { Contact, Entry, EntryType } from '../types';
 
 type LedgerProps = {
   userId: string;
+  displayName: string;
 };
 
-export function Ledger({ userId }: LedgerProps) {
+export function Ledger({ userId, displayName }: LedgerProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
@@ -343,7 +344,7 @@ export function Ledger({ userId }: LedgerProps) {
           <div className="home-top">
             <div className="home-header-row">
               <div className="brand-row">
-                <h2>Krish</h2>
+                <h2>{displayName}</h2>
               </div>
               <button className="icon-btn" onClick={signOut} aria-label="Sign out">
                 ↦

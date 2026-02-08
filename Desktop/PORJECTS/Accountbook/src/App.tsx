@@ -27,9 +27,16 @@ export function App() {
     return <div className="container">Loading...</div>;
   }
 
+  const usernameFromEmail =
+    session?.user.email && session.user.email.includes('@')
+      ? session.user.email.split('@')[0]
+      : null;
+  const displayName =
+    usernameFromEmail || (session?.user.user_metadata?.username as string | undefined) || 'User';
+
   return (
     <div className={`container ${session?.user ? 'app-container' : 'auth-container'}`}>
-      {session?.user ? <Ledger userId={session.user.id} /> : <AuthPanel />}
+      {session?.user ? <Ledger userId={session.user.id} displayName={displayName} /> : <AuthPanel />}
     </div>
   );
 }
