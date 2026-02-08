@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f3f0e9;
-  --surface: #fffdf8;
-  --surface-soft: #f4f1ea;
-  --text: #1f2a24;
-  --text-muted: #6d7a73;
-  --border: #d7ddd3;
-  --brand-1: #0f5c4d;
-  --brand-2: #1e7a66;
-  --success: #157a59;
-  --danger: #ba3a35;
-  --accent: #b36a2d;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --brand-1: #1f2937;
+  --brand-2: #374151;
+  --success: #0f766e;
+  --danger: #b91c1c;
+  --accent: #2563eb;
   --radius-lg: 18px;
   --radius-md: 12px;
 }
@@ -25,8 +25,8 @@ body {
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 10% 10%, #f9f5ee 0%, transparent 36%),
-    radial-gradient(circle at 90% 0%, #e7f2ed 0%, transparent 34%),
+    radial-gradient(circle at 10% 10%, #ffffff 0%, transparent 36%),
+    radial-gradient(circle at 90% 0%, #eef2ff 0%, transparent 34%),
     var(--bg);
 }
 
@@ -121,7 +121,7 @@ button {
   cursor: pointer;
   border: none;
   padding: 11px 14px;
-  background: linear-gradient(135deg, #176754 0%, #1e8b73 100%);
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -129,7 +129,7 @@ button {
 
 button.link {
   background: transparent;
-  color: #176754;
+  color: #1f2937;
   padding: 4px;
   font-weight: 600;
 }
@@ -151,12 +151,16 @@ button.link {
 }
 
 .home-top {
-  background: linear-gradient(140deg, var(--brand-1) 0%, var(--brand-2) 100%);
+  background:
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.18) 0%, transparent 32%),
+    linear-gradient(140deg, #1f2937 0%, #2b3646 52%, #374151 100%);
   color: #ffffff;
-  padding: 16px 14px 17px;
-  border-bottom-left-radius: 22px;
-  border-bottom-right-radius: 22px;
-  box-shadow: 0 10px 30px rgba(15, 92, 77, 0.34);
+  padding: 17px 15px 18px;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+  box-shadow:
+    0 14px 34px rgba(17, 24, 39, 0.26),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .home-header-row {
@@ -179,7 +183,7 @@ button.link {
   border-radius: 16px;
   overflow: hidden;
   color: #52617d;
-  box-shadow: 0 12px 26px rgba(16, 72, 60, 0.2);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
 }
 
 .summary-stats {
@@ -265,7 +269,7 @@ button.link {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #468772 0%, #63ad93 100%);
+  background: linear-gradient(140deg, #4b5563 0%, #6b7280 100%);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -357,11 +361,11 @@ button.link {
   z-index: 14;
   border-radius: 999px;
   padding: 11px 22px;
-  background: linear-gradient(135deg, #cb2b38 0%, #de4150 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
-  box-shadow: 0 12px 24px rgba(201, 53, 53, 0.34);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.34);
 }
 
 .ledger-detail {
@@ -370,9 +374,13 @@ button.link {
 }
 
 .detail-top {
-  background: linear-gradient(140deg, var(--brand-1) 0%, var(--brand-2) 100%);
-  padding: 12px 10px 14px;
-  box-shadow: 0 10px 22px rgba(15, 92, 77, 0.25);
+  background:
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.16) 0%, transparent 30%),
+    linear-gradient(140deg, #1f2937 0%, #2b3646 52%, #374151 100%);
+  padding: 13px 11px 15px;
+  box-shadow:
+    0 12px 26px rgba(17, 24, 39, 0.24),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .detail-header-row {
@@ -570,11 +578,11 @@ button.link {
 }
 
 .give-action-btn {
-  background: linear-gradient(135deg, #c93535 0%, #dc5454 100%);
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
 }
 
 .get-action-btn {
-  background: linear-gradient(135deg, #067e44 0%, #089f55 100%);
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
 }
 
 .entry-edit-overlay {
