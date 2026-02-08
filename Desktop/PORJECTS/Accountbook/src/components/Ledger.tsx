@@ -193,10 +193,6 @@ export function Ledger({ userId }: LedgerProps) {
               </button>
             </div>
 
-            <div className="tab-row">
-              <button className="tab-btn active">Customers</button>
-            </div>
-
             <div className="summary-card">
               <div className="summary-stats">
                 <div>
@@ -207,10 +203,6 @@ export function Ledger({ userId }: LedgerProps) {
                   <p className="muted">You will get</p>
                   <strong className="get-blue">₹{totals.youHaveToGet.toFixed(0)}</strong>
                 </div>
-              </div>
-              <div className="summary-actions">
-                <span>VIEW REPORT</span>
-                <span>OPEN CASHBOOK</span>
               </div>
             </div>
           </div>

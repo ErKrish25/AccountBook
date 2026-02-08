@@ -155,37 +155,6 @@ button.link {
   font-weight: 700;
 }
 
-.tab-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.tab-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.92);
-  border-radius: 0;
-  padding: 0;
-  font-size: 14px;
-}
-
-.tab-btn.active {
-  color: #ffffff;
-  border-bottom: 3px solid #ffffff;
-  padding-bottom: 4px;
-}
-
-.tab-new {
-  background: #2a9d09;
-  color: #ffffff;
-  font-weight: 700;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
 .summary-card {
   margin-top: 10px;
   background: #ffffff;
@@ -212,24 +181,6 @@ button.link {
 .summary-stats strong {
   font-size: 20px;
   line-height: 1.1;
-}
-
-.summary-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 1px solid #eef2f7;
-}
-
-.summary-actions span {
-  text-align: center;
-  color: #1d4ed8;
-  font-weight: 700;
-  padding: 10px 6px;
-  font-size: 12px;
-}
-
-.summary-actions span:first-child {
-  border-right: 1px solid #eef2f7;
 }
 
 .home-body {
@@ -282,7 +233,7 @@ button.link {
   align-items: center;
   gap: 12px;
   color: #1f2937;
-  margin: 0 12px 10px;
+  margin: 0 8px 10px;
 }
 
 .party-avatar {
