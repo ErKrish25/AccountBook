@@ -68,12 +68,13 @@ body {
 
 .auth-subtitle {
   margin: 6px 0 0;
+  padding-bottom: 14px;
   color: var(--text-muted);
   font-size: 17px;
 }
 
 .auth-mode-text {
-  margin: 22px 0 10px;
+  margin: 0 0 10px;
   color: #5f6f89;
   font-size: 19px;
   font-weight: 600;
