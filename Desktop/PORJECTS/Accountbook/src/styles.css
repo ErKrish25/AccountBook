@@ -1,16 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #edf3f2;
-  --surface: #ffffff;
-  --surface-soft: #f6f8fc;
-  --text: #172033;
-  --text-muted: #64748b;
-  --border: #d9e1ec;
-  --brand-1: #124a9f;
-  --brand-2: #2f70cf;
-  --success: #11805d;
-  --danger: #c23232;
+  --bg: #f3f0e9;
+  --surface: #fffdf8;
+  --surface-soft: #f4f1ea;
+  --text: #1f2a24;
+  --text-muted: #6d7a73;
+  --border: #d7ddd3;
+  --brand-1: #0f5c4d;
+  --brand-2: #1e7a66;
+  --success: #157a59;
+  --danger: #ba3a35;
+  --accent: #b36a2d;
   --radius-lg: 18px;
   --radius-md: 12px;
 }
@@ -24,8 +25,8 @@ body {
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 10% 10%, #f6faf8 0%, transparent 36%),
-    radial-gradient(circle at 90% 0%, #ecf5ff 0%, transparent 34%),
+    radial-gradient(circle at 10% 10%, #f9f5ee 0%, transparent 36%),
+    radial-gradient(circle at 90% 0%, #e7f2ed 0%, transparent 34%),
     var(--bg);
 }
 
@@ -112,15 +113,15 @@ select {
 input:focus,
 select:focus {
   outline: none;
-  border-color: #8cb2ea;
-  box-shadow: 0 0 0 3px rgba(47, 112, 207, 0.16);
+  border-color: #7fb49e;
+  box-shadow: 0 0 0 3px rgba(30, 122, 102, 0.15);
 }
 
 button {
   cursor: pointer;
   border: none;
   padding: 11px 14px;
-  background: linear-gradient(135deg, #177b74 0%, #0f9f96 100%);
+  background: linear-gradient(135deg, #176754 0%, #1e8b73 100%);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -128,7 +129,7 @@ button {
 
 button.link {
   background: transparent;
-  color: #16746f;
+  color: #176754;
   padding: 4px;
   font-weight: 600;
 }
@@ -155,7 +156,7 @@ button.link {
   padding: 16px 14px 17px;
   border-bottom-left-radius: 22px;
   border-bottom-right-radius: 22px;
-  box-shadow: 0 10px 30px rgba(23, 64, 133, 0.34);
+  box-shadow: 0 10px 30px rgba(15, 92, 77, 0.34);
 }
 
 .home-header-row {
@@ -178,7 +179,7 @@ button.link {
   border-radius: 16px;
   overflow: hidden;
   color: #52617d;
-  box-shadow: 0 12px 26px rgba(14, 43, 92, 0.2);
+  box-shadow: 0 12px 26px rgba(16, 72, 60, 0.2);
 }
 
 .summary-stats {
@@ -228,7 +229,7 @@ button.link {
   background: transparent;
   border: none;
   padding: 6px;
-  color: #1d4ed8;
+  color: var(--brand-2);
   font-size: 16px;
 }
 
@@ -264,7 +265,7 @@ button.link {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #5d8fda 0%, #6fb4ff 100%);
+  background: linear-gradient(140deg, #468772 0%, #63ad93 100%);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -371,7 +372,7 @@ button.link {
 .detail-top {
   background: linear-gradient(140deg, var(--brand-1) 0%, var(--brand-2) 100%);
   padding: 12px 10px 14px;
-  box-shadow: 0 10px 22px rgba(23, 64, 133, 0.25);
+  box-shadow: 0 10px 22px rgba(15, 92, 77, 0.25);
 }
 
 .detail-header-row {
@@ -593,6 +594,7 @@ button.link {
   border-radius: 14px;
   padding: 14px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
 }
 
 .entry-edit-modal h4 {
@@ -601,15 +603,25 @@ button.link {
   color: #1f2937;
 }
 
+.entry-edit-modal input,
+.entry-edit-modal select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .entry-edit-modal input[type='date'] {
   width: 100%;
   max-width: 100%;
   min-width: 0;
   display: block;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .get-blue {
-  color: #0b56b3;
+  color: var(--accent);
   font-weight: 700;
 }
 
