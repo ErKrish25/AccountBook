@@ -418,7 +418,7 @@ export function Ledger({ userId }: LedgerProps) {
                 </div>
                 <div>
                   <h3>{selectedContact.name}</h3>
-                  <p>{selectedContact.phone ?? 'Click here to view settings'}</p>
+                  {selectedContact.phone && <p>{selectedContact.phone}</p>}
                 </div>
               </div>
               <div className="detail-header-actions">
@@ -435,9 +435,6 @@ export function Ledger({ userId }: LedgerProps) {
                   aria-label="Delete customer"
                 >
                   🗑
-                </button>
-                <button className="icon-btn detail-action-icon" onClick={signOut} aria-label="Sign out">
-                  ↦
                 </button>
               </div>
             </div>
