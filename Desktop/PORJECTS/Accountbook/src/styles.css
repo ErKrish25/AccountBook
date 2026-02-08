@@ -601,6 +601,13 @@ button.link {
   color: #1f2937;
 }
 
+.entry-edit-modal input[type='date'] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: block;
+}
+
 .get-blue {
   color: #0b56b3;
   font-weight: 700;
