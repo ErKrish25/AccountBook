@@ -112,6 +112,7 @@ button.link {
 .ledger-shell {
   width: min(430px, 100%);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .ledger-card h2 {
@@ -272,7 +273,7 @@ button.link {
 }
 
 .party-row {
-  width: 100%;
+  width: auto;
   border-radius: 14px;
   border: 1px solid #e2e8f0;
   padding: 10px 12px;
@@ -298,11 +299,16 @@ button.link {
 .party-main {
   text-align: left;
   flex: 1;
+  min-width: 0;
 }
 
 .party-main strong {
   font-size: 18px;
   font-weight: 500;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .party-main .muted {
@@ -311,6 +317,7 @@ button.link {
 
 .party-balance {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .party-balance strong {
