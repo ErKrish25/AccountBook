@@ -36,7 +36,7 @@ export function AuthPanel() {
       ? supabase.auth.signUp({ email, password })
       : supabase.auth.signInWithPassword({ email, password });
 
-    const { data, error } = await action;
+    const { error } = await action;
     if (error) {
       if (!isSignUp && error.message.toLowerCase().includes('invalid login credentials')) {
         setMessage('Invalid credentials. Create account first or check username/password.');
@@ -47,13 +47,9 @@ export function AuthPanel() {
     }
 
     if (isSignUp) {
-      if (!data.session) {
-        setMessage(
-          'Account created. If email confirmation is enabled in Supabase, disable it for this username flow.'
-        );
-      } else {
-        setMessage('Account created. You can sign in now.');
-      }
+      // Force explicit login after sign-up.
+      await supabase.auth.signOut();
+      setMessage('Account created. Please sign in with your username and password.');
       setIsSignUp(false);
       setPassword('');
     } else {
