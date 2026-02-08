@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f7f1e8;
-  --surface: #fffdf9;
-  --surface-soft: #f5efe4;
-  --text: #2a241d;
-  --text-muted: #7b6f62;
-  --border: #e5d8c8;
-  --brand-1: #7a3a2f;
-  --brand-2: #b06a3f;
-  --success: #1e7a56;
-  --danger: #ba3434;
-  --accent: #a65a2a;
+  --bg: #eef3f7;
+  --surface: #fcfdff;
+  --surface-soft: #f3f7fb;
+  --text: #172033;
+  --text-muted: #66758f;
+  --border: #d8e1ec;
+  --brand-1: #1f2a44;
+  --brand-2: #2f466f;
+  --success: #0f7a6d;
+  --danger: #be2f43;
+  --accent: #3b82f6;
   --radius-lg: 18px;
   --radius-md: 12px;
 }
@@ -25,8 +25,8 @@ body {
   font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 12% 9%, #fff8ee 0%, transparent 36%),
-    radial-gradient(circle at 90% 0%, #f7ece1 0%, transparent 34%),
+    radial-gradient(circle at 12% 9%, #f8fbff 0%, transparent 36%),
+    radial-gradient(circle at 90% 0%, #e7f3ff 0%, transparent 34%),
     var(--bg);
 }
 
@@ -47,11 +47,11 @@ body {
 }
 
 .card {
-  background: rgba(255, 253, 249, 0.95);
-  border: 1px solid rgba(229, 216, 200, 0.92);
+  background: rgba(252, 253, 255, 0.95);
+  border: 1px solid rgba(216, 225, 236, 0.92);
   border-radius: var(--radius-lg);
   padding: 22px;
-  box-shadow: 0 20px 40px rgba(85, 54, 30, 0.12);
+  box-shadow: 0 20px 40px rgba(20, 41, 84, 0.12);
   backdrop-filter: blur(4px);
 }
 
@@ -113,15 +113,15 @@ select {
 input:focus,
 select:focus {
   outline: none;
-  border-color: #d19b6e;
-  box-shadow: 0 0 0 3px rgba(176, 106, 63, 0.17);
+  border-color: #7fa6da;
+  box-shadow: 0 0 0 3px rgba(47, 101, 180, 0.17);
 }
 
 button {
   cursor: pointer;
   border: none;
   padding: 11px 14px;
-  background: linear-gradient(135deg, #8a3e31 0%, #b06a3f 100%);
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -129,7 +129,7 @@ button {
 
 button.link {
   background: transparent;
-  color: #8a3e31;
+  color: #1d375f;
   padding: 4px;
   font-weight: 600;
 }
@@ -153,13 +153,13 @@ button.link {
 .home-top {
   background:
     radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.18) 0%, transparent 32%),
-    linear-gradient(140deg, #7a3a2f 0%, #9b5535 45%, #b06a3f 100%);
+    linear-gradient(140deg, #1f2a44 0%, #2b3d62 45%, #3a5888 100%);
   color: #ffffff;
   padding: 17px 15px 18px;
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   box-shadow:
-    0 14px 34px rgba(122, 58, 47, 0.35),
+    0 14px 34px rgba(20, 41, 84, 0.32),
     inset 0 -1px 0 rgba(255, 255, 255, 0.15);
 }
 
@@ -183,7 +183,7 @@ button.link {
   border-radius: 16px;
   overflow: hidden;
   color: #52617d;
-  box-shadow: 0 10px 24px rgba(122, 74, 36, 0.16);
+  box-shadow: 0 10px 24px rgba(31, 58, 107, 0.16);
 }
 
 .summary-stats {
@@ -233,7 +233,7 @@ button.link {
   background: transparent;
   border: none;
   padding: 6px;
-  color: #9b5535;
+  color: #2f5fa8;
   font-size: 16px;
 }
 
@@ -269,7 +269,7 @@ button.link {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  background: linear-gradient(140deg, #9b5535 0%, #c98755 100%);
+  background: linear-gradient(140deg, #3f6fb3 0%, #6195d8 100%);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -315,11 +315,11 @@ button.link {
 
 .add-party-sheet {
   width: min(390px, 100%);
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px;
-  box-shadow: 0 18px 38px rgba(31, 41, 55, 0.22);
+  box-shadow: 0 18px 38px rgba(20, 41, 84, 0.24);
 }
 
 .add-party-sheet h4 {
@@ -331,7 +331,7 @@ button.link {
   position: fixed;
   inset: 0;
   z-index: 28;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(17, 31, 52, 0.38);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -347,11 +347,11 @@ button.link {
 }
 
 .add-party-cancel-btn {
-  background: linear-gradient(135deg, #a33131 0%, #bb3d3d 100%);
+  background: linear-gradient(135deg, #475569 0%, #64748b 100%);
 }
 
 .add-party-save-btn {
-  background: linear-gradient(135deg, #cb2b38 0%, #de4150 100%);
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
 }
 
 .fab-add {
@@ -361,11 +361,11 @@ button.link {
   z-index: 14;
   border-radius: 999px;
   padding: 11px 22px;
-  background: linear-gradient(135deg, #8f3a32 0%, #ba3434 100%);
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
-  box-shadow: 0 12px 24px rgba(143, 58, 50, 0.34);
+  box-shadow: 0 12px 24px rgba(29, 55, 95, 0.34);
 }
 
 .ledger-detail {
@@ -376,10 +376,10 @@ button.link {
 .detail-top {
   background:
     radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.16) 0%, transparent 30%),
-    linear-gradient(140deg, #7a3a2f 0%, #9b5535 45%, #b06a3f 100%);
+    linear-gradient(140deg, #1f2a44 0%, #2b3d62 45%, #3a5888 100%);
   padding: 13px 11px 15px;
   box-shadow:
-    0 12px 26px rgba(122, 58, 47, 0.3),
+    0 12px 26px rgba(20, 41, 84, 0.28),
     inset 0 -1px 0 rgba(255, 255, 255, 0.14);
 }
 
@@ -578,7 +578,7 @@ button.link {
 }
 
 .give-action-btn {
-  background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+  background: linear-gradient(135deg, #b4233a 0%, #d83a52 100%);
 }
 
 .get-action-btn {
