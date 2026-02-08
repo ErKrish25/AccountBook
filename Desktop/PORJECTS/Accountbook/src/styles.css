@@ -466,6 +466,26 @@ button.link {
   color: #1f2937;
 }
 
+.entry-item-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.entry-item-actions button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.entry-item-actions button.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
 .detail-action-bar {
   position: fixed;
   left: 50%;

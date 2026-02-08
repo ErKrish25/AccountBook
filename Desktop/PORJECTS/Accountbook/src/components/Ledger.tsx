@@ -233,6 +233,63 @@ export function Ledger({ userId }: LedgerProps) {
     await loadData();
   }
 
+  async function editEntry(entry: Entry) {
+    const amountInput = window.prompt('Edit amount', String(entry.amount));
+    if (amountInput === null) return;
+
+    const parsedAmount = Number(amountInput);
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Enter a valid amount');
+      return;
+    }
+
+    const noteInput = window.prompt('Edit note (optional)', entry.note ?? '');
+    if (noteInput === null) return;
+
+    const typeInput = window.prompt('Type: enter "gave" or "got"', entry.type);
+    if (typeInput === null) return;
+    const normalizedType = typeInput.trim().toLowerCase();
+    if (normalizedType !== 'gave' && normalizedType !== 'got') {
+      alert('Type must be "gave" or "got".');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('entries')
+      .update({
+        amount: parsedAmount,
+        note: noteInput.trim() || null,
+        type: normalizedType,
+      })
+      .eq('id', entry.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadData();
+  }
+
+  async function deleteEntry(entry: Entry) {
+    const confirmed = window.confirm('Delete this entry?');
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('entries')
+      .delete()
+      .eq('id', entry.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadData();
+  }
+
   function formatRelativeTime(value: string): string {
     const diffMs = Date.now() - new Date(value).getTime();
     const mins = Math.max(1, Math.floor(diffMs / 60000));
@@ -404,6 +461,14 @@ export function Ledger({ userId }: LedgerProps) {
                     <p className="entry-time">{formatEntryDate(entry.created_at)}</p>
                     <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
                     <strong>{entry.note ?? 'No note'}</strong>
+                    <div className="entry-item-actions">
+                      <button type="button" onClick={() => void editEntry(entry)}>
+                        Edit
+                      </button>
+                      <button type="button" className="danger" onClick={() => void deleteEntry(entry)}>
+                        Delete
+                      </button>
+                    </div>
                   </div>
                   <div className="entry-mid">
                     {entry.type === 'gave' && <strong className="got">₹{entry.amount.toFixed(0)}</strong>}
