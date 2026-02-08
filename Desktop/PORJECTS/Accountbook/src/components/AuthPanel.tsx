@@ -49,6 +49,7 @@ export function AuthPanel() {
     if (isSignUp) {
       // Force explicit login after sign-up.
       await supabase.auth.signOut();
+      alert('Account successfully created. Please sign in.');
       setMessage('Account created. Please sign in with your username and password.');
       setIsSignUp(false);
       setPassword('');
