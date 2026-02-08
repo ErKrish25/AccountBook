@@ -15,6 +15,12 @@ export function Ledger({ userId }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
+  const [entryDraft, setEntryDraft] = useState<{
+    type: EntryType;
+    amount: string;
+    note: string;
+    entryDate: string;
+  } | null>(null);
   const [editEntryDraft, setEditEntryDraft] = useState<{
     id: string;
     amount: string;
@@ -154,29 +160,31 @@ export function Ledger({ userId }: LedgerProps) {
     await loadData(true);
   }
 
-  async function addEntry(entryType: EntryType) {
-    if (!selectedContactId) return;
+  function startEntry(entryType: EntryType) {
+    setEntryDraft({
+      type: entryType,
+      amount: '',
+      note: '',
+      entryDate: new Date().toISOString().slice(0, 10),
+    });
+  }
 
-    const amountInput = window.prompt(
-      `Enter amount for "${entryType === 'gave' ? 'You Gave' : 'You Got'}"`
-    );
-    if (!amountInput) return;
+  async function saveEntryDraft() {
+    if (!selectedContactId || !entryDraft) return;
 
-    const parsedAmount = Number(amountInput);
+    const parsedAmount = Number(entryDraft.amount);
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Enter a valid amount');
       return;
     }
 
-    const noteInput = window.prompt('Enter note (optional)') ?? '';
-
     const { error } = await supabase.from('entries').insert({
       owner_id: userId,
       contact_id: selectedContactId,
-      type: entryType,
+      type: entryDraft.type,
       amount: parsedAmount,
-      note: noteInput.trim() || null,
-      entry_date: new Date().toISOString().slice(0, 10),
+      note: entryDraft.note.trim() || null,
+      entry_date: entryDraft.entryDate,
     });
 
     if (error) {
@@ -184,6 +192,7 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
+    setEntryDraft(null);
     await loadData(true);
   }
 
@@ -492,13 +501,59 @@ export function Ledger({ userId }: LedgerProps) {
           </div>
 
           <div className="detail-action-bar">
-            <button className="give-action-btn" onClick={() => void addEntry('gave')}>
+            <button className="give-action-btn" onClick={() => startEntry('gave')}>
               YOU GAVE ₹
             </button>
-            <button className="get-action-btn" onClick={() => void addEntry('got')}>
+            <button className="get-action-btn" onClick={() => startEntry('got')}>
               YOU GOT ₹
             </button>
           </div>
+
+          {entryDraft && (
+            <div className="entry-edit-overlay">
+              <form
+                className="entry-edit-modal stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveEntryDraft();
+                }}
+              >
+                <h4>{entryDraft.type === 'gave' ? 'Add You Gave Entry' : 'Add You Got Entry'}</h4>
+                <input
+                  value={entryDraft.amount}
+                  onChange={(e) =>
+                    setEntryDraft((draft) => (draft ? { ...draft, amount: e.target.value } : draft))
+                  }
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Amount"
+                  required
+                />
+                <input
+                  value={entryDraft.note}
+                  onChange={(e) =>
+                    setEntryDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
+                  }
+                  placeholder="Note (optional)"
+                />
+                <input
+                  type="date"
+                  value={entryDraft.entryDate}
+                  onChange={(e) =>
+                    setEntryDraft((draft) => (draft ? { ...draft, entryDate: e.target.value } : draft))
+                  }
+                  required
+                />
+                <div className="row">
+                  <button type="button" className="link" onClick={() => setEntryDraft(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit">Save</button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {editEntryDraft && (
             <div className="entry-edit-overlay">
