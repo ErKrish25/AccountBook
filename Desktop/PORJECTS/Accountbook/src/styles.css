@@ -302,11 +302,11 @@ button.link {
   z-index: 14;
   border-radius: 999px;
   padding: 10px 20px;
-  background: #0f766e;
+  background: #c93535;
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 10px 20px rgba(201, 53, 53, 0.3);
 }
 
 .ledger-detail {
