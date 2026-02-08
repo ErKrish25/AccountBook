@@ -398,25 +398,34 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             </div>
 
             {showAddPartyForm && (
-              <form onSubmit={addContact} className="add-party-sheet stack">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Party name"
-                  required
-                />
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Phone (optional)"
-                />
-                <div className="row">
-                  <button type="button" className="link" onClick={() => setShowAddPartyForm(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit">Save</button>
-                </div>
-              </form>
+              <div className="add-party-overlay">
+                <form onSubmit={addContact} className="add-party-sheet stack">
+                  <h4>Add Customer</h4>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Party name"
+                    required
+                  />
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone (optional)"
+                  />
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="add-party-cancel-btn"
+                      onClick={() => setShowAddPartyForm(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="add-party-save-btn">
+                      Save
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             <button className="fab-add" onClick={() => setShowAddPartyForm(true)}>
