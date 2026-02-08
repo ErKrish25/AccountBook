@@ -179,6 +179,60 @@ export function Ledger({ userId }: LedgerProps) {
     await supabase.auth.signOut();
   }
 
+  async function editSelectedContact() {
+    if (!selectedContact) return;
+
+    const newName = window.prompt('Edit customer name', selectedContact.name);
+    if (newName === null) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      alert('Name cannot be empty');
+      return;
+    }
+
+    const newPhone = window.prompt('Edit phone (optional)', selectedContact.phone ?? '');
+    if (newPhone === null) return;
+
+    const { error } = await supabase
+      .from('contacts')
+      .update({
+        name: trimmedName,
+        phone: newPhone.trim() || null,
+      })
+      .eq('id', selectedContact.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadData();
+  }
+
+  async function deleteSelectedContact() {
+    if (!selectedContact) return;
+
+    const confirmed = window.confirm(
+      `Delete "${selectedContact.name}" and all related entries? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', selectedContact.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setSelectedContactId('');
+    await loadData();
+  }
+
   function formatRelativeTime(value: string): string {
     const diffMs = Date.now() - new Date(value).getTime();
     const mins = Math.max(1, Math.floor(diffMs / 60000));
@@ -316,6 +370,15 @@ export function Ledger({ userId }: LedgerProps) {
               <strong className={selectedBalance >= 0 ? 'gave' : 'got'}>
                 ₹{Math.abs(selectedBalance).toFixed(0)}
               </strong>
+            </div>
+
+            <div className="detail-contact-actions">
+              <button onClick={() => void editSelectedContact()} type="button">
+                Edit
+              </button>
+              <button onClick={() => void deleteSelectedContact()} type="button" className="danger">
+                Delete
+              </button>
             </div>
           </div>
 
