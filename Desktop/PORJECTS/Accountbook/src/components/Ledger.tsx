@@ -543,7 +543,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <div className="entry-left">
                     <p className="entry-time">{formatEntryDate(entry.created_at)}</p>
                     <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
-                    <strong>{entry.note ?? 'No note'}</strong>
+                    <p className="entry-note">{entry.note ?? 'No note'}</p>
                     <div className="entry-item-actions">
                       <button type="button" onClick={() => editEntry(entry)}>
                         Edit
