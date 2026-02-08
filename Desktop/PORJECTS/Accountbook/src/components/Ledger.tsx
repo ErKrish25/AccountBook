@@ -12,10 +12,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
+  const [editContactDraft, setEditContactDraft] = useState<{
+    id: string;
+    name: string;
+    phone: string;
+  } | null>(null);
   const [entryDraft, setEntryDraft] = useState<{
     type: EntryType;
     amount: string;
@@ -104,6 +110,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     }
 
     try {
+      setLoadError(null);
       const [{ data: contactRows, error: contactError }, { data: entryRows, error: entryError }] =
         await Promise.all([
           supabase
@@ -119,7 +126,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         ]);
 
       if (contactError || entryError) {
-        alert(contactError?.message ?? entryError?.message ?? 'Failed to load data');
+        const message = contactError?.message ?? entryError?.message ?? 'Failed to load data';
+        setLoadError(message);
+        if (silent) {
+          alert(message);
+        }
         return;
       }
 
@@ -133,6 +144,12 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       setEntries(loadedEntries);
       if (selectedContactId && !loadedContacts.some((contact) => contact.id === selectedContactId)) {
         setSelectedContactId('');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load data';
+      setLoadError(message);
+      if (silent) {
+        alert(message);
       }
     } finally {
       if (!silent) {
@@ -202,27 +219,32 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await supabase.auth.signOut();
   }
 
-  async function editSelectedContact() {
+  function editSelectedContact() {
     if (!selectedContact) return;
 
-    const newName = window.prompt('Edit customer name', selectedContact.name);
-    if (newName === null) return;
-    const trimmedName = newName.trim();
+    setEditContactDraft({
+      id: selectedContact.id,
+      name: selectedContact.name,
+      phone: selectedContact.phone ?? '',
+    });
+  }
+
+  async function saveEditedContact() {
+    if (!editContactDraft) return;
+
+    const trimmedName = editContactDraft.name.trim();
     if (!trimmedName) {
       alert('Name cannot be empty');
       return;
     }
 
-    const newPhone = window.prompt('Edit phone (optional)', selectedContact.phone ?? '');
-    if (newPhone === null) return;
-
     const { error } = await supabase
       .from('contacts')
       .update({
         name: trimmedName,
-        phone: newPhone.trim() || null,
+        phone: editContactDraft.phone.trim() || null,
       })
-      .eq('id', selectedContact.id)
+      .eq('id', editContactDraft.id)
       .eq('owner_id', userId);
 
     if (error) {
@@ -230,6 +252,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
+    setEditContactDraft(null);
     await loadData(true);
   }
 
@@ -334,7 +357,22 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }
 
   if (loading) {
-    return <p>Loading...</p>;
+    return (
+      <div className="card auth-card">
+        <h3>Loading KhataPlus...</h3>
+        <p className="muted">Fetching your latest customers and entries.</p>
+      </div>
+    );
+  }
+
+  if (loadError && contacts.length === 0 && entries.length === 0) {
+    return (
+      <div className="card auth-card stack">
+        <h3>Could not load data</h3>
+        <p className="muted">{loadError}</p>
+        <button onClick={() => void loadData()}>Retry</button>
+      </div>
+    );
   }
 
   return (
@@ -452,7 +490,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               <div className="detail-header-actions">
                 <button
                   className="icon-btn detail-action-icon"
-                  onClick={() => void editSelectedContact()}
+                  onClick={() => editSelectedContact()}
                   aria-label="Edit customer"
                 >
                   ✎
@@ -619,6 +657,41 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 />
                 <div className="row">
                   <button type="button" className="link" onClick={() => setEditEntryDraft(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit">Save</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {editContactDraft && (
+            <div className="entry-edit-overlay">
+              <form
+                className="entry-edit-modal stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveEditedContact();
+                }}
+              >
+                <h4>Edit Customer</h4>
+                <input
+                  value={editContactDraft.name}
+                  onChange={(e) =>
+                    setEditContactDraft((draft) => (draft ? { ...draft, name: e.target.value } : draft))
+                  }
+                  placeholder="Customer name"
+                  required
+                />
+                <input
+                  value={editContactDraft.phone}
+                  onChange={(e) =>
+                    setEditContactDraft((draft) => (draft ? { ...draft, phone: e.target.value } : draft))
+                  }
+                  placeholder="Mobile number (optional)"
+                />
+                <div className="row">
+                  <button type="button" className="link" onClick={() => setEditContactDraft(null)}>
                     Cancel
                   </button>
                   <button type="submit">Save</button>
