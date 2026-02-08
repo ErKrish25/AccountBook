@@ -69,6 +69,20 @@ export function Ledger({ userId }: LedgerProps) {
     [selectedEntries]
   );
 
+  const selectedEntriesWithBalance = useMemo(() => {
+    const chronological = [...selectedEntries].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    let runningBalance = 0;
+    const withBalance = chronological.map((entry) => {
+      runningBalance += entry.type === 'gave' ? entry.amount : -entry.amount;
+      return { ...entry, runningBalance };
+    });
+
+    return withBalance.reverse();
+  }, [selectedEntries]);
+
   useEffect(() => {
     void loadData();
   }, []);
@@ -131,8 +145,7 @@ export function Ledger({ userId }: LedgerProps) {
     await loadData();
   }
 
-  async function addEntry(e: FormEvent) {
-    e.preventDefault();
+  async function addEntry(entryType: EntryType) {
     if (!selectedContactId || !amount) return;
 
     const parsedAmount = Number(amount);
@@ -144,7 +157,7 @@ export function Ledger({ userId }: LedgerProps) {
     const { error } = await supabase.from('entries').insert({
       owner_id: userId,
       contact_id: selectedContactId,
-      type,
+      type: entryType,
       amount: parsedAmount,
       note: note.trim() || null,
       entry_date: new Date().toISOString().slice(0, 10),
@@ -157,6 +170,7 @@ export function Ledger({ userId }: LedgerProps) {
 
     setAmount('');
     setNote('');
+    setType(entryType);
     await loadData();
   }
 
@@ -172,6 +186,16 @@ export function Ledger({ userId }: LedgerProps) {
     if (hrs < 24) return `${hrs} hours ago`;
     const days = Math.floor(hrs / 24);
     return `${days} days ago`;
+  }
+
+  function formatEntryDate(value: string): string {
+    return new Date(value).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   if (loading) {
@@ -266,67 +290,92 @@ export function Ledger({ userId }: LedgerProps) {
           </div>
         </section>
       ) : (
-        <section className="card ledger-card">
-          <div className="row">
-            <button className="link" onClick={() => setSelectedContactId('')}>
-              Back
-            </button>
-            <button className="link" onClick={signOut}>
-              Sign out
-            </button>
-          </div>
-
-          <h2>{selectedContact.name}</h2>
-          {selectedContact.phone && <p className="muted">{selectedContact.phone}</p>}
-          <p className={`balance-pill ${selectedBalance >= 0 ? 'gave' : 'got'}`}>
-            Balance: {selectedBalance >= 0 ? '+' : ''}
-            {selectedBalance.toFixed(2)}
-          </p>
-
-          <form onSubmit={addEntry} className="stack">
-            <div className="entry-type-toggle">
-              <button
-                type="button"
-                className={type === 'gave' ? 'active' : ''}
-                onClick={() => setType('gave')}
-              >
-                You gave
+        <section className="ledger-detail">
+          <div className="detail-top">
+            <div className="detail-header-row">
+              <button className="icon-btn detail-back" onClick={() => setSelectedContactId('')}>
+                ←
               </button>
-              <button
-                type="button"
-                className={type === 'got' ? 'active' : ''}
-                onClick={() => setType('got')}
-              >
-                You got
-              </button>
-            </div>
-            <input
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Amount"
-              required
-            />
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note" />
-            <button type="submit">Save entry</button>
-          </form>
-
-          <div className="entries">
-            {selectedEntries.map((entry) => (
-              <div key={entry.id} className="entry-row">
-                <div>
-                  <strong>{entry.type === 'gave' ? 'You gave' : 'You got'}</strong>
-                  <p className="muted">{entry.note ?? 'No note'}</p>
+              <div className="detail-party">
+                <div className="party-avatar detail-avatar">
+                  {selectedContact.name[0]?.toUpperCase() ?? '?'}
                 </div>
-                <div className={entry.type === 'gave' ? 'gave' : 'got'}>
-                  {entry.type === 'gave' ? '+' : '-'}
-                  {entry.amount.toFixed(2)}
+                <div>
+                  <h3>{selectedContact.name}</h3>
+                  <p>{selectedContact.phone ?? 'Click here to view settings'}</p>
                 </div>
               </div>
-            ))}
-            {selectedEntries.length === 0 && <p className="muted">No entries yet.</p>}
+              <button className="icon-btn" onClick={signOut} aria-label="Sign out">
+                ↦
+              </button>
+            </div>
+
+            <div className="detail-balance-card">
+              <span>{selectedBalance >= 0 ? 'You will get' : 'You will give'}</span>
+              <strong className={selectedBalance >= 0 ? 'gave' : 'got'}>
+                ₹{Math.abs(selectedBalance).toFixed(0)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="detail-body">
+            <div className="detail-inputs">
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Amount"
+              />
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Note (optional)"
+              />
+            </div>
+
+            <div className="entry-head-row">
+              <span>Entries</span>
+              <span>You gave</span>
+              <span>You got</span>
+            </div>
+
+            <div className="entries detail-entries">
+              {selectedEntriesWithBalance.map((entry) => (
+                <div key={entry.id} className="entry-grid-row">
+                  <div className="entry-left">
+                    <p className="entry-time">{formatEntryDate(entry.created_at)}</p>
+                    <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
+                    <strong>{entry.note ?? 'No note'}</strong>
+                  </div>
+                  <div className="entry-mid">
+                    {entry.type === 'gave' && <strong className="got">₹{entry.amount.toFixed(0)}</strong>}
+                  </div>
+                  <div className="entry-right">
+                    {entry.type === 'got' && <strong className="gave">₹{entry.amount.toFixed(0)}</strong>}
+                  </div>
+                </div>
+              ))}
+              {selectedEntriesWithBalance.length === 0 && (
+                <p className="muted empty-text">No previous entries.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="detail-action-bar">
+            <button
+              className={`give-action-btn ${type === 'gave' ? 'active' : ''}`}
+              onClick={() => void addEntry('gave')}
+            >
+              YOU GAVE ₹
+            </button>
+            <button
+              className={`get-action-btn ${type === 'got' ? 'active' : ''}`}
+              onClick={() => void addEntry('got')}
+            >
+              YOU GOT ₹
+            </button>
           </div>
         </section>
       )}
