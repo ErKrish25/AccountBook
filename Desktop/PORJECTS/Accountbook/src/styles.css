@@ -553,6 +553,15 @@ button.link {
   color: #b91c1c;
 }
 
+.danger-solid {
+  background: linear-gradient(135deg, #be2f43 0%, #d94a5e 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
 .detail-action-bar {
   position: fixed;
   left: 50%;

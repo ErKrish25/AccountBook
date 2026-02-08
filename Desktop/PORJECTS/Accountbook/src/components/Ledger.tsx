@@ -17,6 +17,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<
+    | { kind: 'contact'; id: string; name: string }
+    | { kind: 'entry'; id: string }
+    | null
+  >(null);
   const [editContactDraft, setEditContactDraft] = useState<{
     id: string;
     name: string;
@@ -256,18 +261,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await loadData(true);
   }
 
-  async function deleteSelectedContact() {
-    if (!selectedContact) return;
-
-    const confirmed = window.confirm(
-      `Delete "${selectedContact.name}" and all related entries? This action cannot be undone.`
-    );
-    if (!confirmed) return;
-
+  async function deleteSelectedContact(contactId: string) {
     const { error } = await supabase
       .from('contacts')
       .delete()
-      .eq('id', selectedContact.id)
+      .eq('id', contactId)
       .eq('owner_id', userId);
 
     if (error) {
@@ -318,14 +316,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await loadData(true);
   }
 
-  async function deleteEntry(entry: Entry) {
-    const confirmed = window.confirm('Delete this entry?');
-    if (!confirmed) return;
-
+  async function deleteEntry(entryId: string) {
     const { error } = await supabase
       .from('entries')
       .delete()
-      .eq('id', entry.id)
+      .eq('id', entryId)
       .eq('owner_id', userId);
 
     if (error) {
@@ -334,6 +329,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     }
 
     await loadData(true);
+  }
+
+  async function confirmDeleteDialog() {
+    if (!deleteDialog) return;
+
+    if (deleteDialog.kind === 'contact') {
+      await deleteSelectedContact(deleteDialog.id);
+    } else {
+      await deleteEntry(deleteDialog.id);
+    }
+
+    setDeleteDialog(null);
   }
 
   function formatRelativeTime(value: string): string {
@@ -409,6 +416,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search Customer"
+                autoCapitalize="words"
               />
             </div>
 
@@ -443,6 +451,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Party name"
+                    autoCapitalize="words"
                     required
                   />
                   <input
@@ -497,7 +506,14 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 </button>
                 <button
                   className="icon-btn detail-action-icon detail-action-danger"
-                  onClick={() => void deleteSelectedContact()}
+                  onClick={() =>
+                    selectedContact &&
+                    setDeleteDialog({
+                      kind: 'contact',
+                      id: selectedContact.id,
+                      name: selectedContact.name,
+                    })
+                  }
                   aria-label="Delete customer"
                 >
                   🗑
@@ -532,7 +548,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                       <button type="button" onClick={() => editEntry(entry)}>
                         Edit
                       </button>
-                      <button type="button" className="danger" onClick={() => void deleteEntry(entry)}>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => setDeleteDialog({ kind: 'entry', id: entry.id })}
+                      >
                         Delete
                       </button>
                     </div>
@@ -587,6 +607,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     setEntryDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
                   }
                   placeholder="Note (optional)"
+                  autoCapitalize="sentences"
                 />
                 <input
                   type="date"
@@ -633,6 +654,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     setEditEntryDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
                   }
                   placeholder="Note (optional)"
+                  autoCapitalize="sentences"
                 />
                 <select
                   value={editEntryDraft.type}
@@ -681,6 +703,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     setEditContactDraft((draft) => (draft ? { ...draft, name: e.target.value } : draft))
                   }
                   placeholder="Customer name"
+                  autoCapitalize="words"
                   required
                 />
                 <input
@@ -697,6 +720,27 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <button type="submit">Save</button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {deleteDialog && (
+            <div className="entry-edit-overlay">
+              <div className="entry-edit-modal stack">
+                <h4>Delete {deleteDialog.kind === 'contact' ? 'Customer' : 'Entry'}?</h4>
+                <p className="muted">
+                  {deleteDialog.kind === 'contact'
+                    ? `Delete "${deleteDialog.name}" and all related entries?`
+                    : 'This entry will be removed permanently.'}
+                </p>
+                <div className="row">
+                  <button type="button" className="link" onClick={() => setDeleteDialog(null)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="danger-solid" onClick={() => void confirmDeleteDialog()}>
+                    Delete
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>
