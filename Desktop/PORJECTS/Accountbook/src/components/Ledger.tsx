@@ -15,9 +15,6 @@ export function Ledger({ userId }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
-  const [type, setType] = useState<EntryType>('gave');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
 
   const selectedEntries = useMemo(
     () => entries.filter((entry) => entry.contact_id === selectedContactId),
@@ -146,20 +143,27 @@ export function Ledger({ userId }: LedgerProps) {
   }
 
   async function addEntry(entryType: EntryType) {
-    if (!selectedContactId || !amount) return;
+    if (!selectedContactId) return;
 
-    const parsedAmount = Number(amount);
+    const amountInput = window.prompt(
+      `Enter amount for "${entryType === 'gave' ? 'You Gave' : 'You Got'}"`
+    );
+    if (!amountInput) return;
+
+    const parsedAmount = Number(amountInput);
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Enter a valid amount');
       return;
     }
+
+    const noteInput = window.prompt('Enter note (optional)') ?? '';
 
     const { error } = await supabase.from('entries').insert({
       owner_id: userId,
       contact_id: selectedContactId,
       type: entryType,
       amount: parsedAmount,
-      note: note.trim() || null,
+      note: noteInput.trim() || null,
       entry_date: new Date().toISOString().slice(0, 10),
     });
 
@@ -168,9 +172,6 @@ export function Ledger({ userId }: LedgerProps) {
       return;
     }
 
-    setAmount('');
-    setNote('');
-    setType(entryType);
     await loadData();
   }
 
@@ -319,22 +320,6 @@ export function Ledger({ userId }: LedgerProps) {
           </div>
 
           <div className="detail-body">
-            <div className="detail-inputs">
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Amount"
-              />
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Note (optional)"
-              />
-            </div>
-
             <div className="entry-head-row">
               <span>Entries</span>
               <span>You gave</span>
@@ -364,16 +349,10 @@ export function Ledger({ userId }: LedgerProps) {
           </div>
 
           <div className="detail-action-bar">
-            <button
-              className={`give-action-btn ${type === 'gave' ? 'active' : ''}`}
-              onClick={() => void addEntry('gave')}
-            >
+            <button className="give-action-btn" onClick={() => void addEntry('gave')}>
               YOU GAVE ₹
             </button>
-            <button
-              className={`get-action-btn ${type === 'got' ? 'active' : ''}`}
-              onClick={() => void addEntry('got')}
-            >
+            <button className="get-action-btn" onClick={() => void addEntry('got')}>
               YOU GOT ₹
             </button>
           </div>
