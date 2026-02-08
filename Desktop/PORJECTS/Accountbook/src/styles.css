@@ -326,6 +326,12 @@ button.link {
   gap: 8px;
 }
 
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .detail-back {
   color: #ffffff;
   font-size: 22px;
@@ -375,24 +381,21 @@ button.link {
   font-size: 18px;
 }
 
-.detail-contact-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
+.detail-action-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0;
+  font-size: 15px;
 }
 
-.detail-contact-actions button {
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background: transparent;
-  color: #ffffff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.detail-contact-actions button.danger {
-  border-color: rgba(255, 255, 255, 0.75);
+.detail-action-danger {
+  border-color: rgba(255, 182, 182, 0.9);
+  background: rgba(220, 38, 38, 0.2);
 }
 
 .detail-body {

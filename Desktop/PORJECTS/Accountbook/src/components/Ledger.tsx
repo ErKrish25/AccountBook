@@ -360,9 +360,25 @@ export function Ledger({ userId }: LedgerProps) {
                   <p>{selectedContact.phone ?? 'Click here to view settings'}</p>
                 </div>
               </div>
-              <button className="icon-btn" onClick={signOut} aria-label="Sign out">
-                ↦
-              </button>
+              <div className="detail-header-actions">
+                <button
+                  className="icon-btn detail-action-icon"
+                  onClick={() => void editSelectedContact()}
+                  aria-label="Edit customer"
+                >
+                  ✎
+                </button>
+                <button
+                  className="icon-btn detail-action-icon detail-action-danger"
+                  onClick={() => void deleteSelectedContact()}
+                  aria-label="Delete customer"
+                >
+                  🗑
+                </button>
+                <button className="icon-btn detail-action-icon" onClick={signOut} aria-label="Sign out">
+                  ↦
+                </button>
+              </div>
             </div>
 
             <div className="detail-balance-card">
@@ -372,14 +388,6 @@ export function Ledger({ userId }: LedgerProps) {
               </strong>
             </div>
 
-            <div className="detail-contact-actions">
-              <button onClick={() => void editSelectedContact()} type="button">
-                Edit
-              </button>
-              <button onClick={() => void deleteSelectedContact()} type="button" className="danger">
-                Delete
-              </button>
-            </div>
           </div>
 
           <div className="detail-body">
