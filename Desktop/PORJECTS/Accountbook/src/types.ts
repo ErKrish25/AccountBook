@@ -20,3 +20,25 @@ export type Entry = {
 export type ContactSummary = Contact & {
   balance: number;
 };
+
+export type InventoryMovementType = 'in' | 'out';
+
+export type InventoryItem = {
+  id: string;
+  owner_id: string;
+  name: string;
+  unit: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InventoryMovement = {
+  id: string;
+  owner_id: string;
+  item_id: string;
+  type: InventoryMovementType;
+  quantity: number;
+  note: string | null;
+  movement_date: string;
+  created_at: string;
+};
