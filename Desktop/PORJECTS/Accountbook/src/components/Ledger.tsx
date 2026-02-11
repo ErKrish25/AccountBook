@@ -9,6 +9,33 @@ type LedgerProps = {
 
 type AppSection = 'dashboard' | 'inventory';
 
+const INVENTORY_UNITS = [
+  'NOS',
+  'PCS',
+  'KG',
+  'G',
+  'MG',
+  'L',
+  'ML',
+  'MTR',
+  'CM',
+  'MM',
+  'FT',
+  'IN',
+  'BOX',
+  'PACK',
+  'DOZEN',
+  'SET',
+  'BAG',
+  'BOTTLE',
+  'CAN',
+  'JAR',
+  'ROLL',
+  'PAIR',
+  'CARTON',
+  'TON',
+];
+
 export function Ledger({ userId, displayName }: LedgerProps) {
   const [section, setSection] = useState<AppSection>('dashboard');
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -16,6 +43,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -23,6 +51,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
+  const [showAddInventoryForm, setShowAddInventoryForm] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<
     | { kind: 'contact'; id: string; name: string }
     | { kind: 'entry'; id: string }
@@ -40,13 +69,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     entryDate: string;
   } | null>(null);
   const [inventoryDraft, setInventoryDraft] = useState<{
-    itemName: string;
-    unit: string;
     type: InventoryMovementType;
     quantity: string;
     note: string;
     movementDate: string;
   } | null>(null);
+  const [inventoryItemDraft, setInventoryItemDraft] = useState<{
+    name: string;
+    unit: string;
+  }>({
+    name: '',
+    unit: 'NOS',
+  });
   const [editEntryDraft, setEditEntryDraft] = useState<{
     id: string;
     amount: string;
@@ -63,6 +97,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const selectedContact = useMemo(
     () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
     [contacts, selectedContactId]
+  );
+  const selectedInventoryItem = useMemo(
+    () => inventoryItems.find((item) => item.id === selectedInventoryItemId) ?? null,
+    [inventoryItems, selectedInventoryItemId]
   );
 
   const contactBalances = useMemo(() => {
@@ -150,13 +188,15 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     };
   }, [inventoryItemsWithStock]);
 
-  const recentInventoryMovements = useMemo(() => {
-    const nameMap = new Map(inventoryItems.map((item) => [item.id, item.name]));
-    return inventoryMovements.slice(0, 20).map((movement) => ({
-      ...movement,
-      itemName: nameMap.get(movement.item_id) ?? 'Unknown item',
-    }));
-  }, [inventoryMovements, inventoryItems]);
+  const selectedInventoryMovements = useMemo(() => {
+    return inventoryMovements.filter((movement) => movement.item_id === selectedInventoryItemId);
+  }, [inventoryMovements, selectedInventoryItemId]);
+
+  const selectedInventoryStock = useMemo(() => {
+    return selectedInventoryMovements.reduce((total, movement) => {
+      return movement.type === 'in' ? total + movement.quantity : total - movement.quantity;
+    }, 0);
+  }, [selectedInventoryMovements]);
 
   useEffect(() => {
     void loadData();
@@ -218,6 +258,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       if (selectedContactId && !loadedContacts.some((contact) => contact.id === selectedContactId)) {
         setSelectedContactId('');
       }
+      if (selectedInventoryItemId && !loadedItems.some((item) => item.id === selectedInventoryItemId)) {
+        setSelectedInventoryItemId('');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load data';
       setLoadError(message);
@@ -262,14 +305,37 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }
 
   function startInventoryMovement(type: InventoryMovementType) {
+    if (!selectedInventoryItem) return;
     setInventoryDraft({
-      itemName: '',
-      unit: 'pcs',
       type,
       quantity: '',
       note: '',
       movementDate: new Date().toISOString().slice(0, 10),
     });
+  }
+
+  async function addInventoryItem(e: FormEvent) {
+    e.preventDefault();
+    const trimmedName = inventoryItemDraft.name.trim();
+    if (!trimmedName) {
+      alert('Item name is required');
+      return;
+    }
+
+    const { error } = await supabase.from('inventory_items').insert({
+      owner_id: userId,
+      name: trimmedName,
+      unit: inventoryItemDraft.unit.trim().toUpperCase() || null,
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setInventoryItemDraft({ name: '', unit: 'NOS' });
+    setShowAddInventoryForm(false);
+    await loadData(true);
   }
 
   async function saveEntryDraft() {
@@ -300,46 +366,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }
 
   async function saveInventoryDraft() {
-    if (!inventoryDraft) return;
-
-    const itemName = inventoryDraft.itemName.trim();
+    if (!inventoryDraft || !selectedInventoryItem) return;
     const quantity = Number(inventoryDraft.quantity);
-
-    if (!itemName) {
-      alert('Item name is required');
-      return;
-    }
 
     if (Number.isNaN(quantity) || quantity <= 0) {
       alert('Enter a valid quantity');
       return;
     }
 
-    const normalized = itemName.toLowerCase();
-    let item = inventoryItems.find((existing) => existing.name.trim().toLowerCase() === normalized) ?? null;
-
-    if (!item) {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .insert({
-          owner_id: userId,
-          name: itemName,
-          unit: inventoryDraft.unit.trim() || null,
-        })
-        .select('*')
-        .single();
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      item = data as InventoryItem;
-    }
-
     const { error } = await supabase.from('inventory_movements').insert({
       owner_id: userId,
-      item_id: item.id,
+      item_id: selectedInventoryItem.id,
       type: inventoryDraft.type,
       quantity,
       note: inventoryDraft.note.trim() || null,
@@ -700,7 +737,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             </div>
           </section>
         )
-      ) : (
+      ) : !selectedInventoryItem ? (
         <section className="ledger-home inventory-home">
           <div className="home-top inventory-top">
             <div className="home-header-row">
@@ -742,50 +779,129 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
             <div className="party-list inventory-list">
               {filteredInventoryItems.map((item) => (
-                <div key={item.id} className="party-row inventory-row">
+                <button
+                  key={item.id}
+                  type="button"
+                  className="party-row inventory-row"
+                  onClick={() => setSelectedInventoryItemId(item.id)}
+                >
                   <div className="party-avatar">{item.name[0]?.toUpperCase() ?? '?'}</div>
                   <div className="party-main">
                     <strong>{item.name}</strong>
-                    <p className="muted">Unit: {item.unit ?? 'pcs'}</p>
+                    <p className="muted">Unit: {item.unit ?? 'NOS'}</p>
                   </div>
                   <div className="party-balance">
                     <strong className={item.stock > 0 ? 'gave' : 'got'}>{item.stock.toFixed(2)}</strong>
                     <p className="muted">In Stock</p>
                   </div>
-                </div>
+                </button>
               ))}
               {filteredInventoryItems.length === 0 && <p className="muted empty-text">No inventory items found.</p>}
             </div>
 
+            {showAddInventoryForm && (
+              <div className="add-party-overlay">
+                <form onSubmit={addInventoryItem} className="add-party-sheet stack">
+                  <h4>Add Inventory Item</h4>
+                  <input
+                    value={inventoryItemDraft.name}
+                    onChange={(e) =>
+                      setInventoryItemDraft((draft) => ({ ...draft, name: e.target.value }))
+                    }
+                    placeholder="Item name"
+                    autoCapitalize="words"
+                    required
+                  />
+                  <input
+                    value={inventoryItemDraft.unit}
+                    onChange={(e) =>
+                      setInventoryItemDraft((draft) => ({ ...draft, unit: e.target.value.toUpperCase() }))
+                    }
+                    list="inventory-unit-options"
+                    placeholder="Unit (e.g., NOS, KG)"
+                  />
+                  <datalist id="inventory-unit-options">
+                    {INVENTORY_UNITS.map((unit) => (
+                      <option key={unit} value={unit} />
+                    ))}
+                  </datalist>
+                  <div className="row">
+                    <button type="button" className="add-party-cancel-btn" onClick={() => setShowAddInventoryForm(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="add-party-save-btn">
+                      Save
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <button className="fab-add with-footer" onClick={() => setShowAddInventoryForm(true)}>
+              + Add Item
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="ledger-detail">
+          <div className="detail-top inventory-top">
+            <div className="detail-header-row">
+              <button className="icon-btn detail-back" onClick={() => setSelectedInventoryItemId('')}>
+                ←
+              </button>
+              <div className="detail-party">
+                <div className="party-avatar detail-avatar">
+                  {selectedInventoryItem.name[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div>
+                  <h3>{selectedInventoryItem.name}</h3>
+                  <p>{selectedInventoryItem.unit ?? 'NOS'}</p>
+                </div>
+              </div>
+              <div />
+            </div>
+
+            <div className="detail-balance-card">
+              <span>Current Stock</span>
+              <strong className={selectedInventoryStock > 0 ? 'gave' : 'got'}>
+                {selectedInventoryStock.toFixed(2)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="detail-body with-footer-space">
             <div className="inventory-movements-card">
-              <h4>Recent In / Out</h4>
+              <h4>Item Movements</h4>
               <div className="inventory-movement-list">
-                {recentInventoryMovements.map((movement) => (
+                {selectedInventoryMovements.map((movement) => (
                   <div key={movement.id} className="inventory-movement-row">
                     <div>
-                      <strong>{movement.itemName}</strong>
+                      <strong>{movement.type === 'in' ? 'Stock In' : 'Stock Out'}</strong>
                       <p className="muted">{movement.note ?? 'No note'}</p>
                     </div>
                     <div className="inventory-movement-right">
                       <strong className={movement.type === 'in' ? 'gave' : 'got'}>
-                        {movement.type === 'in' ? '+' : '-'}{movement.quantity.toFixed(2)}
+                        {movement.type === 'in' ? '+' : '-'}
+                        {movement.quantity.toFixed(2)}
                       </strong>
                       <p className="muted">{movement.movement_date}</p>
                     </div>
                   </div>
                 ))}
-                {recentInventoryMovements.length === 0 && <p className="muted empty-text">No stock movement yet.</p>}
+                {selectedInventoryMovements.length === 0 && (
+                  <p className="muted empty-text">No stock movement yet.</p>
+                )}
               </div>
             </div>
+          </div>
 
-            <div className="inventory-action-row">
-              <button type="button" className="add-party-save-btn" onClick={() => startInventoryMovement('in')}>
-                STOCK IN
-              </button>
-              <button type="button" className="add-party-cancel-btn" onClick={() => startInventoryMovement('out')}>
-                STOCK OUT
-              </button>
-            </div>
+          <div className="detail-action-bar">
+            <button className="give-action-btn" onClick={() => startInventoryMovement('in')}>
+              STOCK IN
+            </button>
+            <button className="get-action-btn" onClick={() => startInventoryMovement('out')}>
+              STOCK OUT
+            </button>
           </div>
         </section>
       )}
@@ -795,7 +911,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           <button
             type="button"
             className={section === 'dashboard' ? 'active' : ''}
-            onClick={() => setSection('dashboard')}
+            onClick={() => {
+              setSelectedInventoryItemId('');
+              setSection('dashboard');
+            }}
           >
             Main Dashboard
           </button>
@@ -804,6 +923,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             className={section === 'inventory' ? 'active' : ''}
             onClick={() => {
               setSelectedContactId('');
+              setSelectedInventoryItemId('');
               setSection('inventory');
             }}
           >
@@ -863,20 +983,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             }}
           >
             <h4>{inventoryDraft.type === 'in' ? 'Stock In' : 'Stock Out'}</h4>
-            <input
-              value={inventoryDraft.itemName}
-              onChange={(e) =>
-                setInventoryDraft((draft) => (draft ? { ...draft, itemName: e.target.value } : draft))
-              }
-              placeholder="Item name"
-              autoCapitalize="words"
-              required
-            />
-            <input
-              value={inventoryDraft.unit}
-              onChange={(e) => setInventoryDraft((draft) => (draft ? { ...draft, unit: e.target.value } : draft))}
-              placeholder="Unit (e.g., pcs, kg)"
-            />
+            <p className="muted">{selectedInventoryItem?.name ?? 'Selected item'}</p>
             <input
               value={inventoryDraft.quantity}
               onChange={(e) =>
