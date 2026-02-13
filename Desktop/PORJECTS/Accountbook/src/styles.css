@@ -390,6 +390,22 @@ button.link {
     linear-gradient(140deg, #213351 0%, #2d4f73 45%, #39728c 100%);
 }
 
+.inventory-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-leave-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .inventory-summary-card {
   color: #3f4d63;
 }

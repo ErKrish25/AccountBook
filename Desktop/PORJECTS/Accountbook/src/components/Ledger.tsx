@@ -401,6 +401,24 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     });
   }
 
+  async function leaveInventorySyncGroup() {
+    if (!activeInventoryGroup) return;
+
+    const { error } = await supabase
+      .from('inventory_sync_group_members')
+      .delete()
+      .eq('group_id', activeInventoryGroup.id)
+      .eq('user_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setSelectedInventoryItemId('');
+    await loadData(true);
+  }
+
   async function addInventoryItem(e: FormEvent) {
     e.preventDefault();
     const trimmedName = inventoryItemDraft.name.trim();
@@ -834,9 +852,20 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               <div className="brand-row">
                 <h2>Inventory</h2>
               </div>
-              <button className="icon-btn" onClick={signOut} aria-label="Sign out">
-                ↦
-              </button>
+              <div className="inventory-header-actions">
+                {activeInventoryGroup && (
+                  <button
+                    type="button"
+                    className="inventory-leave-btn"
+                    onClick={() => void leaveInventorySyncGroup()}
+                  >
+                    Leave Group
+                  </button>
+                )}
+                <button className="icon-btn" onClick={signOut} aria-label="Sign out">
+                  ↦
+                </button>
+              </div>
             </div>
 
             <div className="summary-card inventory-summary-card">
