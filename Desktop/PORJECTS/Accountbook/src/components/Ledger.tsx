@@ -211,6 +211,56 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     void loadData();
   }, []);
 
+  useEffect(() => {
+    const inventoryFilter = activeInventoryGroup?.id
+      ? `group_id=eq.${activeInventoryGroup.id}`
+      : `owner_id=eq.${userId}`;
+
+    const channel = supabase
+      .channel(`inventory-live-${userId}-${activeInventoryGroup?.id ?? 'personal'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: inventoryFilter,
+        },
+        () => {
+          void loadData(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory_movements',
+          filter: inventoryFilter,
+        },
+        () => {
+          void loadData(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory_sync_group_members',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void loadData(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, activeInventoryGroup?.id]);
+
   async function loadData(silent = false) {
     if (!silent) {
       setLoading(true);
