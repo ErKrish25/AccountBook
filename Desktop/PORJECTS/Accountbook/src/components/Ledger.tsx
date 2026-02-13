@@ -570,13 +570,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       {section === 'dashboard' ? (
         !selectedContact ? (
           <section className="ledger-home">
-            <div className="home-top">
-              <div className="home-header-row">
-                <div className="brand-row">
-                  <h2>{displayName}</h2>
+            <div className="premium-header">
+              <div className="premium-header-main">
+                <div className="premium-brand-wrap">
+                  <div className="premium-brand-icon">PL</div>
+                  <div className="premium-brand-text">
+                    <h2>Premium Ledger</h2>
+                  </div>
                 </div>
-                <button className="icon-btn" onClick={signOut} aria-label="Sign out">
-                  ↦
+                <button className="profile-btn" onClick={signOut} aria-label="Sign out">
+                  ◉
                 </button>
               </div>
             </div>
@@ -605,6 +608,13 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   placeholder="Search customer..."
                   autoCapitalize="words"
                 />
+              </div>
+
+              <div className="activity-header">
+                <h4>Recent Activity</h4>
+                <button type="button" className="view-all-btn" onClick={() => setSearchText('')}>
+                  View All
+                </button>
               </div>
 
               <div className="party-list">
@@ -656,8 +666,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 </div>
               )}
 
-              <button className="fab-add with-footer" onClick={() => setShowAddPartyForm(true)}>
-                + Add Customer
+              <button className="fab-add with-footer icon-only" onClick={() => setShowAddPartyForm(true)} aria-label="Add Customer">
+                +
               </button>
             </div>
           </section>
@@ -924,24 +934,34 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         <div className="app-footer-nav">
           <button
             type="button"
-            className={section === 'dashboard' ? 'active' : ''}
+            className={`footer-item ${section === 'dashboard' ? 'active' : ''}`}
             onClick={() => {
               setSelectedInventoryItemId('');
               setSection('dashboard');
             }}
           >
-            Main Dashboard
+            <span aria-hidden="true">⌂</span>
+            <small>Home</small>
           </button>
           <button
             type="button"
-            className={section === 'inventory' ? 'active' : ''}
+            className={`footer-item ${section === 'inventory' ? 'active' : ''}`}
             onClick={() => {
               setSelectedContactId('');
               setSelectedInventoryItemId('');
               setSection('inventory');
             }}
           >
-            Inventories
+            <span aria-hidden="true">▤</span>
+            <small>Inventory</small>
+          </button>
+          <button type="button" className="footer-item" disabled>
+            <span aria-hidden="true">🧾</span>
+            <small>Invoice</small>
+          </button>
+          <button type="button" className="footer-item" disabled>
+            <span aria-hidden="true">▥</span>
+            <small>Reports</small>
           </button>
         </div>
       )}
