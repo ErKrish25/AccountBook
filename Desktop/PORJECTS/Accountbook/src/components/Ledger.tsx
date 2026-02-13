@@ -398,7 +398,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }
 
   async function joinInventorySyncGroup() {
-    const code = inventoryJoinCode.trim().toUpperCase();
+    const code = inventoryJoinCode.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
     if (!code) {
       alert('Enter a join code');
       return;
@@ -413,7 +413,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     }
 
     if (!joinedGroupId) {
-      alert('Group not found for this code');
+      alert('Group code not found. Please check code and try again.');
       return;
     }
 
@@ -920,7 +920,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <div className="inventory-join-row">
                     <input
                       value={inventoryJoinCode}
-                      onChange={(e) => setInventoryJoinCode(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setInventoryJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                      }
                       placeholder="Enter join code"
                       autoCapitalize="characters"
                     />

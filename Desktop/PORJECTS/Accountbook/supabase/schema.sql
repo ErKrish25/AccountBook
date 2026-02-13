@@ -200,11 +200,19 @@ set search_path = public
 as $$
 declare
   target_group_id uuid;
+  normalized_code text;
+  caller_user_id uuid;
 begin
+  caller_user_id := auth.uid();
+  if caller_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  normalized_code := upper(trim(input_code));
   select g.id
   into target_group_id
   from public.inventory_sync_groups g
-  where upper(g.join_code) = upper(trim(input_code))
+  where upper(g.join_code) = normalized_code
   limit 1;
 
   if target_group_id is null then
@@ -212,12 +220,17 @@ begin
   end if;
 
   insert into public.inventory_sync_group_members (group_id, user_id, role)
-  values (target_group_id, auth.uid(), 'member')
+  values (target_group_id, caller_user_id, 'member')
   on conflict (group_id, user_id) do nothing;
 
   return target_group_id;
 end;
 $$;
+
+revoke all on function public.find_inventory_group_by_code(text) from public;
+revoke all on function public.join_inventory_group_by_code(text) from public;
+grant execute on function public.find_inventory_group_by_code(text) to authenticated;
+grant execute on function public.join_inventory_group_by_code(text) to authenticated;
 
 drop policy if exists "contacts_select_own" on public.contacts;
 create policy "contacts_select_own" on public.contacts
