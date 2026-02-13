@@ -722,6 +722,7 @@ button.link {
   grid-template-columns: 1.4fr 0.8fr 0.8fr;
   border: 1px solid #e5e7eb;
   box-shadow: 0 6px 16px rgba(39, 55, 86, 0.06);
+  cursor: pointer;
 }
 
 .entry-grid-row + .entry-grid-row {
@@ -803,13 +804,17 @@ button.link {
 
 .detail-action-bar {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 66px;
-  width: min(460px, 100%);
+  left: 12px;
+  right: 12px;
+  transform: none;
+  width: auto;
+  max-width: none;
+  bottom: max(12px, env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.98);
-  border-top: 1px solid #e5e7eb;
-  padding: 10px 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  padding: 10px 12px 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;

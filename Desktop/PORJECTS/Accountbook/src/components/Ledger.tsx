@@ -97,12 +97,21 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     name: '',
     unit: 'NOS',
   });
-  const [editEntryDraft, setEditEntryDraft] = useState<{
+  const [entryActionDraft, setEntryActionDraft] = useState<{
     id: string;
     amount: string;
     note: string;
     type: EntryType;
     entryDate: string;
+    mode: 'edit' | 'delete';
+  } | null>(null);
+  const [movementActionDraft, setMovementActionDraft] = useState<{
+    id: string;
+    quantity: string;
+    note: string;
+    type: InventoryMovementType;
+    movementDate: string;
+    mode: 'edit' | 'delete';
   } | null>(null);
 
   const selectedEntries = useMemo(
@@ -521,6 +530,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       alert(error.message);
       return;
     }
+    alert('Group name changed successfully.');
     await loadData(true);
   }
 
@@ -678,20 +688,27 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await loadData(true);
   }
 
-  function editEntry(entry: Entry) {
-    setEditEntryDraft({
+  function openEntryActionForm(entry: Entry) {
+    setEntryActionDraft({
       id: entry.id,
       amount: String(entry.amount),
       note: entry.note ?? '',
       type: entry.type,
       entryDate: entry.entry_date,
+      mode: 'edit',
     });
   }
 
-  async function saveEditedEntry() {
-    if (!editEntryDraft) return;
+  async function submitEntryAction() {
+    if (!entryActionDraft) return;
 
-    const parsedAmount = Number(editEntryDraft.amount);
+    if (entryActionDraft.mode === 'delete') {
+      await deleteEntry(entryActionDraft.id);
+      setEntryActionDraft(null);
+      return;
+    }
+
+    const parsedAmount = Number(entryActionDraft.amount);
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Enter a valid amount');
       return;
@@ -701,11 +718,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       .from('entries')
       .update({
         amount: parsedAmount,
-        note: editEntryDraft.note.trim() || null,
-        type: editEntryDraft.type,
-        entry_date: editEntryDraft.entryDate,
+        note: entryActionDraft.note.trim() || null,
+        type: entryActionDraft.type,
+        entry_date: entryActionDraft.entryDate,
       })
-      .eq('id', editEntryDraft.id)
+      .eq('id', entryActionDraft.id)
       .eq('owner_id', userId);
 
     if (error) {
@@ -713,7 +730,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
-    setEditEntryDraft(null);
+    setEntryActionDraft(null);
     await loadData(true);
   }
 
@@ -729,6 +746,56 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
+    await loadData(true);
+  }
+
+  function openMovementActionForm(movement: InventoryMovement) {
+    setMovementActionDraft({
+      id: movement.id,
+      quantity: String(movement.quantity),
+      note: movement.note ?? '',
+      type: movement.type,
+      movementDate: movement.movement_date,
+      mode: 'edit',
+    });
+  }
+
+  async function submitMovementAction() {
+    if (!movementActionDraft) return;
+
+    if (movementActionDraft.mode === 'delete') {
+      const { error } = await supabase.from('inventory_movements').delete().eq('id', movementActionDraft.id);
+      if (error) {
+        alert(error.message);
+        return;
+      }
+      setMovementActionDraft(null);
+      await loadData(true);
+      return;
+    }
+
+    const quantity = Number(movementActionDraft.quantity);
+    if (Number.isNaN(quantity) || quantity <= 0) {
+      alert('Enter a valid quantity');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('inventory_movements')
+      .update({
+        quantity,
+        note: movementActionDraft.note.trim() || null,
+        type: movementActionDraft.type,
+        movement_date: movementActionDraft.movementDate,
+      })
+      .eq('id', movementActionDraft.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setMovementActionDraft(null);
     await loadData(true);
   }
 
@@ -927,23 +994,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
               <div className="entries detail-entries">
                 {selectedEntriesWithBalance.map((entry) => (
-                  <div key={entry.id} className="entry-grid-row">
+                  <div key={entry.id} className="entry-grid-row" onClick={() => openEntryActionForm(entry)}>
                     <div className="entry-left">
                       <p className="entry-time">{formatEntryDate(entry.created_at)}</p>
                       <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
                       <p className="entry-note">{entry.note ?? 'No note'}</p>
-                      <div className="entry-item-actions">
-                        <button type="button" onClick={() => editEntry(entry)}>
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="danger"
-                          onClick={() => setDeleteDialog({ kind: 'entry', id: entry.id })}
-                        >
-                          Delete
-                        </button>
-                      </div>
                     </div>
                     <div className="entry-mid">
                       {entry.type === 'gave' && <strong className="got">₹{entry.amount.toFixed(0)}</strong>}
@@ -1190,7 +1245,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
             <div className="entries detail-entries">
               {selectedInventoryMovements.map((movement) => (
-                <div key={movement.id} className="entry-grid-row inventory-entry-grid-row">
+                <div
+                  key={movement.id}
+                  className="entry-grid-row inventory-entry-grid-row"
+                  onClick={() => openMovementActionForm(movement)}
+                >
                   <div className="entry-left">
                     <p className="entry-time">{formatEntryDate(movement.created_at)}</p>
                     <p className="entry-note">{movement.note ?? 'No note'}</p>
@@ -1336,55 +1395,155 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         </div>
       )}
 
-      {editEntryDraft && (
+      {entryActionDraft && (
         <div className="entry-edit-overlay">
           <form
             className="entry-edit-modal stack"
             onSubmit={(e) => {
               e.preventDefault();
-              void saveEditedEntry();
+              void submitEntryAction();
             }}
           >
-            <h4>Edit Entry</h4>
-            <input
-              value={editEntryDraft.amount}
-              onChange={(e) =>
-                setEditEntryDraft((draft) => (draft ? { ...draft, amount: e.target.value } : draft))
-              }
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Amount"
-              required
-            />
-            <input
-              value={editEntryDraft.note}
-              onChange={(e) => setEditEntryDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))}
-              placeholder="Note (optional)"
-              autoCapitalize="sentences"
-            />
+            <h4>Entry Action</h4>
             <select
-              value={editEntryDraft.type}
+              value={entryActionDraft.mode}
               onChange={(e) =>
-                setEditEntryDraft((draft) => (draft ? { ...draft, type: e.target.value as EntryType } : draft))
+                setEntryActionDraft((draft) =>
+                  draft ? { ...draft, mode: e.target.value as 'edit' | 'delete' } : draft
+                )
               }
             >
-              <option value="gave">You gave</option>
-              <option value="got">You got</option>
+              <option value="edit">Edit Entry</option>
+              <option value="delete">Delete Entry</option>
             </select>
-            <input
-              type="date"
-              value={editEntryDraft.entryDate}
-              onChange={(e) =>
-                setEditEntryDraft((draft) => (draft ? { ...draft, entryDate: e.target.value } : draft))
-              }
-              required
-            />
+
+            {entryActionDraft.mode === 'edit' ? (
+              <>
+                <input
+                  value={entryActionDraft.amount}
+                  onChange={(e) =>
+                    setEntryActionDraft((draft) => (draft ? { ...draft, amount: e.target.value } : draft))
+                  }
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Amount"
+                  required
+                />
+                <input
+                  value={entryActionDraft.note}
+                  onChange={(e) =>
+                    setEntryActionDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
+                  }
+                  placeholder="Note (optional)"
+                  autoCapitalize="sentences"
+                />
+                <select
+                  value={entryActionDraft.type}
+                  onChange={(e) =>
+                    setEntryActionDraft((draft) => (draft ? { ...draft, type: e.target.value as EntryType } : draft))
+                  }
+                >
+                  <option value="gave">You gave</option>
+                  <option value="got">You got</option>
+                </select>
+                <input
+                  type="date"
+                  value={entryActionDraft.entryDate}
+                  onChange={(e) =>
+                    setEntryActionDraft((draft) => (draft ? { ...draft, entryDate: e.target.value } : draft))
+                  }
+                  required
+                />
+              </>
+            ) : (
+              <p className="muted">This entry will be deleted permanently.</p>
+            )}
             <div className="row">
-              <button type="button" className="link" onClick={() => setEditEntryDraft(null)}>
+              <button type="button" className="link" onClick={() => setEntryActionDraft(null)}>
                 Cancel
               </button>
-              <button type="submit">Save</button>
+              <button type="submit" className={entryActionDraft.mode === 'delete' ? 'danger-solid' : ''}>
+                {entryActionDraft.mode === 'delete' ? 'Delete' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {movementActionDraft && (
+        <div className="entry-edit-overlay">
+          <form
+            className="entry-edit-modal stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitMovementAction();
+            }}
+          >
+            <h4>Stock Movement Action</h4>
+            <select
+              value={movementActionDraft.mode}
+              onChange={(e) =>
+                setMovementActionDraft((draft) =>
+                  draft ? { ...draft, mode: e.target.value as 'edit' | 'delete' } : draft
+                )
+              }
+            >
+              <option value="edit">Edit Movement</option>
+              <option value="delete">Delete Movement</option>
+            </select>
+
+            {movementActionDraft.mode === 'edit' ? (
+              <>
+                <input
+                  value={movementActionDraft.quantity}
+                  onChange={(e) =>
+                    setMovementActionDraft((draft) => (draft ? { ...draft, quantity: e.target.value } : draft))
+                  }
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Quantity"
+                  required
+                />
+                <input
+                  value={movementActionDraft.note}
+                  onChange={(e) =>
+                    setMovementActionDraft((draft) => (draft ? { ...draft, note: e.target.value } : draft))
+                  }
+                  placeholder="Note (optional)"
+                />
+                <select
+                  value={movementActionDraft.type}
+                  onChange={(e) =>
+                    setMovementActionDraft((draft) =>
+                      draft ? { ...draft, type: e.target.value as InventoryMovementType } : draft
+                    )
+                  }
+                >
+                  <option value="in">Stock In</option>
+                  <option value="out">Stock Out</option>
+                </select>
+                <input
+                  type="date"
+                  value={movementActionDraft.movementDate}
+                  onChange={(e) =>
+                    setMovementActionDraft((draft) => (draft ? { ...draft, movementDate: e.target.value } : draft))
+                  }
+                  required
+                />
+              </>
+            ) : (
+              <p className="muted">This movement will be deleted permanently.</p>
+            )}
+
+            <div className="row">
+              <button type="button" className="link" onClick={() => setMovementActionDraft(null)}>
+                Cancel
+              </button>
+              <button type="submit" className={movementActionDraft.mode === 'delete' ? 'danger-solid' : ''}>
+                {movementActionDraft.mode === 'delete' ? 'Delete' : 'Save'}
+              </button>
             </div>
           </form>
         </div>
