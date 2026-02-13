@@ -51,8 +51,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([]);
   const [activeInventoryGroup, setActiveInventoryGroup] = useState<InventorySyncGroup | null>(null);
-  const [inventoryGroupName, setInventoryGroupName] = useState('');
-  const [inventoryJoinCode, setInventoryJoinCode] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -353,92 +351,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     });
   }
 
-  function generateJoinCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i += 1) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return code;
-  }
-
-  async function createInventorySyncGroup() {
-    const groupName = inventoryGroupName.trim() || `${displayName} Group`;
-    const joinCode = generateJoinCode();
-
-    const { data: groupData, error: groupError } = await supabase
-      .from('inventory_sync_groups')
-      .insert({
-        owner_id: userId,
-        name: groupName,
-        join_code: joinCode,
-      })
-      .select('*')
-      .single();
-
-    if (groupError || !groupData) {
-      alert(groupError?.message ?? 'Failed to create sync group');
-      return;
-    }
-
-    const { error: memberError } = await supabase.from('inventory_sync_group_members').insert({
-      group_id: groupData.id,
-      user_id: userId,
-      role: 'owner',
-    });
-
-    if (memberError) {
-      alert(memberError.message);
-      return;
-    }
-
-    setInventoryGroupName('');
-    setInventoryJoinCode('');
-    await loadData(true);
-  }
-
-  async function joinInventorySyncGroup() {
-    const code = inventoryJoinCode.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
-    if (!code) {
-      alert('Enter a join code');
-      return;
-    }
-
-    const { data: joinedGroupId, error: joinError } = await supabase.rpc('join_inventory_group_by_code', {
-      input_code: code,
-    });
-    if (joinError) {
-      alert(joinError.message);
-      return;
-    }
-
-    if (!joinedGroupId) {
-      alert('Group code not found. Please check code and try again.');
-      return;
-    }
-
-    setInventoryJoinCode('');
-    await loadData(true);
-  }
-
-  async function leaveInventorySyncGroup() {
-    if (!activeInventoryGroup) return;
-
-    const { error } = await supabase
-      .from('inventory_sync_group_members')
-      .delete()
-      .eq('group_id', activeInventoryGroup.id)
-      .eq('user_id', userId);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setSelectedInventoryItemId('');
-    await loadData(true);
-  }
-
   async function addInventoryItem(e: FormEvent) {
     e.preventDefault();
     const trimmedName = inventoryItemDraft.name.trim();
@@ -662,7 +574,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     });
   }
 
-  const showFooter = true;
+  const showFooter =
+    (section === 'dashboard' && !selectedContact) || (section === 'inventory' && !selectedInventoryItem);
 
   if (loading) {
     return (
@@ -895,45 +808,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           </div>
 
           <div className="home-body inventory-body with-footer-space">
-            <div className="inventory-sync-panel">
-              {activeInventoryGroup ? (
-                <div className="inventory-sync-active">
-                  <p className="muted">Inventory Sync Enabled</p>
-                  <strong>{activeInventoryGroup.name}</strong>
-                  <p className="muted">Join code: {activeInventoryGroup.join_code}</p>
-                  <button type="button" className="link" onClick={() => void leaveInventorySyncGroup()}>
-                    Leave group
-                  </button>
-                </div>
-              ) : (
-                <div className="inventory-sync-setup stack">
-                  <p className="muted">Sync inventory with family/team members</p>
-                  <input
-                    value={inventoryGroupName}
-                    onChange={(e) => setInventoryGroupName(e.target.value)}
-                    placeholder="Group name (optional)"
-                    autoCapitalize="words"
-                  />
-                  <button type="button" onClick={() => void createInventorySyncGroup()}>
-                    Create Sync Group
-                  </button>
-                  <div className="inventory-join-row">
-                    <input
-                      value={inventoryJoinCode}
-                      onChange={(e) =>
-                        setInventoryJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-                      }
-                      placeholder="Enter join code"
-                      autoCapitalize="characters"
-                    />
-                    <button type="button" onClick={() => void joinInventorySyncGroup()}>
-                      Join
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="search-row">
               <input
                 value={inventorySearchText}
