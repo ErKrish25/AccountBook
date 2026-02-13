@@ -153,65 +153,7 @@ button.link {
 
 .ledger-home {
   min-height: 100vh;
-  background: #eef2f7;
-}
-
-.premium-header {
-  background: #ffffff;
-  padding: 18px 16px 16px;
-  border-bottom: 1px solid #e4e9f2;
-}
-
-.premium-header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.premium-brand-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.premium-brand-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  background: linear-gradient(135deg, #1d3870 0%, #274f9a 100%);
-}
-
-.premium-brand-text h2 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.premium-brand-text p {
-  margin: 1px 0 0;
-  font-size: 12px;
-  color: #6a7b96;
-}
-
-.profile-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: 1px solid #dce4ef;
-  background: #f5f8fc;
-  color: #42526c;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  font-weight: 700;
-  padding: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
 }
 
 .home-top {
@@ -240,91 +182,33 @@ button.link {
   letter-spacing: -0.02em;
 }
 
-.premium-body {
-  padding-top: 14px;
+.summary-card {
+  margin-top: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  overflow: hidden;
+  color: #52617d;
+  box-shadow: 0 10px 24px rgba(31, 58, 107, 0.16);
 }
 
-.dashboard-cards {
+.summary-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0 12px 12px;
+  text-align: center;
 }
 
-.metric-card {
-  border-radius: 20px;
-  background: #ffffff;
-  border: 1px solid #e1e8f3;
-  padding: 16px 14px;
-  box-shadow: 0 12px 28px rgba(37, 51, 76, 0.08);
+.summary-stats > div {
+  padding: 14px 9px 12px;
 }
 
-.metric-label {
-  margin: 0;
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #8a99af;
-  font-weight: 700;
+.summary-stats > div:first-child {
+  border-right: 1px solid #e4ebf7;
 }
 
-.metric-card strong {
-  margin-top: 10px;
-  display: block;
-  font-size: 30px;
-  letter-spacing: -0.03em;
-  line-height: 1.03;
-}
-
-.metric-sub {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: #8a99af;
-}
-
-.payable-card strong {
-  color: #ef3e62;
-}
-
-.receivable-card strong {
-  color: #12a46e;
-}
-
-.premium-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-}
-
-.search-icon {
-  color: #98a8be;
-  font-size: 19px;
-  margin-left: 2px;
-}
-
-.activity-header {
-  margin: 18px 12px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.activity-header h4 {
-  margin: 0;
-  font-size: 16px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.view-all-btn {
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid #d8e3f3;
-  background: #f3f7fd;
-  color: #29498a;
-  font-size: 14px;
-  font-weight: 700;
+.summary-stats strong {
+  font-size: 22px;
+  line-height: 1.1;
 }
 
 .home-body {
@@ -369,17 +253,17 @@ button.link {
 }
 
 .party-list {
-  margin-top: 0;
+  margin-top: 13px;
 }
 
 .party-row {
   width: calc(100% - 24px);
   margin: 0 12px 10px;
-  border-radius: 20px;
-  border: 1px solid #e1e8f3;
-  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
   background: #ffffff;
-  box-shadow: 0 12px 28px rgba(37, 51, 76, 0.08);
+  box-shadow: 0 8px 22px rgba(70, 46, 28, 0.08);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -392,15 +276,15 @@ button.link {
 }
 
 .party-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: #eff3f8;
-  color: #3c4c66;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, #3f6fb3 0%, #6195d8 100%);
+  color: #ffffff;
   display: grid;
   place-items: center;
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .party-main {
@@ -411,7 +295,7 @@ button.link {
 
 .party-main strong {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -419,8 +303,7 @@ button.link {
 }
 
 .party-main .muted {
-  font-size: 14px;
-  color: #8b9ab2;
+  font-size: 13px;
 }
 
 .party-balance {
@@ -429,33 +312,11 @@ button.link {
 }
 
 .party-balance strong {
-  font-size: 18px;
-  letter-spacing: -0.03em;
-  line-height: 1;
+  font-size: 17px;
 }
 
-.status-pill {
-  margin-top: 8px;
-  display: inline-block;
-  border-radius: 9px;
-  padding: 6px 9px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.status-receive {
-  color: #1f49a2;
-  background: #eaf0ff;
-}
-
-.status-pay {
-  color: #0f7a6d;
-  background: #e9fbf4;
-}
-
-.status-settle {
-  color: #7f8ea6;
-  background: #f0f3f8;
+.party-balance .muted {
+  font-size: 12px;
 }
 
 .empty-text {
