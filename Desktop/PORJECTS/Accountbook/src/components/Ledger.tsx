@@ -1431,9 +1431,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               required
             />
             <div className="row">
-              <button type="button" className="link" onClick={() => setEntryActionDraft(null)}>
-                Cancel
-              </button>
               <button
                 type="button"
                 className="danger-solid"
@@ -1445,6 +1442,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 }}
               >
                 Delete
+              </button>
+              <button type="button" className="link" onClick={() => setEntryActionDraft(null)}>
+                Cancel
               </button>
               <button type="submit">
                 Save
@@ -1503,9 +1503,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             />
 
             <div className="row">
-              <button type="button" className="link" onClick={() => setMovementActionDraft(null)}>
-                Cancel
-              </button>
               <button
                 type="button"
                 className="danger-solid"
@@ -1517,6 +1514,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 }}
               >
                 Delete
+              </button>
+              <button type="button" className="link" onClick={() => setMovementActionDraft(null)}>
+                Cancel
               </button>
               <button type="submit">
                 Save
