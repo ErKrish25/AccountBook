@@ -175,6 +175,50 @@ as $$
   );
 $$;
 
+create or replace function public.find_inventory_group_by_code(input_code text)
+returns table (
+  id uuid,
+  name text,
+  join_code text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select g.id, g.name, g.join_code
+  from public.inventory_sync_groups g
+  where upper(g.join_code) = upper(trim(input_code))
+  limit 1;
+$$;
+
+create or replace function public.join_inventory_group_by_code(input_code text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_group_id uuid;
+begin
+  select g.id
+  into target_group_id
+  from public.inventory_sync_groups g
+  where upper(g.join_code) = upper(trim(input_code))
+  limit 1;
+
+  if target_group_id is null then
+    return null;
+  end if;
+
+  insert into public.inventory_sync_group_members (group_id, user_id, role)
+  values (target_group_id, auth.uid(), 'member')
+  on conflict (group_id, user_id) do nothing;
+
+  return target_group_id;
+end;
+$$;
+
 drop policy if exists "contacts_select_own" on public.contacts;
 create policy "contacts_select_own" on public.contacts
   for select using (auth.uid() = owner_id);

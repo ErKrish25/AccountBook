@@ -404,30 +404,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
-    const { data: groupData, error: groupError } = await supabase
-      .from('inventory_sync_groups')
-      .select('*')
-      .eq('join_code', code)
-      .maybeSingle();
-
-    if (groupError) {
-      alert(groupError.message);
-      return;
-    }
-
-    if (!groupData) {
-      alert('Group not found for this code');
-      return;
-    }
-
-    const { error: memberError } = await supabase.from('inventory_sync_group_members').insert({
-      group_id: groupData.id,
-      user_id: userId,
-      role: 'member',
+    const { data: joinedGroupId, error: joinError } = await supabase.rpc('join_inventory_group_by_code', {
+      input_code: code,
     });
+    if (joinError) {
+      alert(joinError.message);
+      return;
+    }
 
-    if (memberError && memberError.code !== '23505') {
-      alert(memberError.message);
+    if (!joinedGroupId) {
+      alert('Group not found for this code');
       return;
     }
 
