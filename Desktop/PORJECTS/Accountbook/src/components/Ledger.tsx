@@ -78,6 +78,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     name: string;
     phone: string;
   } | null>(null);
+  const [editInventoryItemDraft, setEditInventoryItemDraft] = useState<{
+    id: string;
+    name: string;
+    unit: string;
+  } | null>(null);
   const [entryDraft, setEntryDraft] = useState<{
     type: EntryType;
     amount: string;
@@ -670,6 +675,42 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await loadData(true);
   }
 
+  function editSelectedInventoryItem() {
+    if (!selectedInventoryItem) return;
+
+    setEditInventoryItemDraft({
+      id: selectedInventoryItem.id,
+      name: selectedInventoryItem.name,
+      unit: selectedInventoryItem.unit ?? 'NOS',
+    });
+  }
+
+  async function saveEditedInventoryItem() {
+    if (!editInventoryItemDraft) return;
+
+    const trimmedName = editInventoryItemDraft.name.trim();
+    if (!trimmedName) {
+      alert('Item name cannot be empty');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('inventory_items')
+      .update({
+        name: trimmedName,
+        unit: editInventoryItemDraft.unit.trim().toUpperCase() || null,
+      })
+      .eq('id', editInventoryItemDraft.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setEditInventoryItemDraft(null);
+    await loadData(true);
+  }
+
   async function deleteSelectedContact(contactId: string) {
     const { error } = await supabase
       .from('contacts')
@@ -940,31 +981,23 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 <button className="icon-btn detail-back" onClick={() => setSelectedContactId('')}>
                   ←
                 </button>
-                <div className="detail-party">
+                <div
+                  className="detail-party detail-party-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => editSelectedContact()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      editSelectedContact();
+                    }
+                  }}
+                >
                   <div className="party-avatar detail-avatar">{selectedContact.name[0]?.toUpperCase() ?? '?'}</div>
                   <div>
                     <h3>{selectedContact.name}</h3>
                     {selectedContact.phone && <p>{selectedContact.phone}</p>}
                   </div>
-                </div>
-                <div className="detail-header-actions">
-                  <button className="icon-btn detail-action-icon" onClick={() => editSelectedContact()} aria-label="Edit customer">
-                    ✎
-                  </button>
-                  <button
-                    className="icon-btn detail-action-icon detail-action-danger"
-                    onClick={() =>
-                      selectedContact &&
-                      setDeleteDialog({
-                        kind: 'contact',
-                        id: selectedContact.id,
-                        name: selectedContact.name,
-                      })
-                    }
-                    aria-label="Delete customer"
-                  >
-                    🗑
-                  </button>
                 </div>
               </div>
 
@@ -1205,7 +1238,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               <button className="icon-btn detail-back" onClick={() => setSelectedInventoryItemId('')}>
                 ←
               </button>
-              <div className="detail-party">
+              <div
+                className="detail-party detail-party-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => editSelectedInventoryItem()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    editSelectedInventoryItem();
+                  }
+                }}
+              >
                 <div className="party-avatar detail-avatar">
                   {selectedInventoryItem.name[0]?.toUpperCase() ?? '?'}
                 </div>
@@ -1214,7 +1258,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <p>{selectedInventoryItem.unit ?? 'NOS'}</p>
                 </div>
               </div>
-              <div />
             </div>
 
             <div className="detail-balance-card">
@@ -1553,7 +1596,64 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               placeholder="Mobile number (optional)"
             />
             <div className="row">
+              <button
+                type="button"
+                className="danger-solid"
+                onClick={() => {
+                  if (!editContactDraft) return;
+                  if (!window.confirm('Delete this customer and all related entries?')) return;
+                  const targetId = editContactDraft.id;
+                  setEditContactDraft(null);
+                  void deleteSelectedContact(targetId);
+                }}
+              >
+                Delete
+              </button>
               <button type="button" className="link" onClick={() => setEditContactDraft(null)}>
+                Cancel
+              </button>
+              <button type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editInventoryItemDraft && (
+        <div className="entry-edit-overlay">
+          <form
+            className="entry-edit-modal stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveEditedInventoryItem();
+            }}
+          >
+            <h4>Edit Item</h4>
+            <input
+              value={editInventoryItemDraft.name}
+              onChange={(e) =>
+                setEditInventoryItemDraft((draft) => (draft ? { ...draft, name: e.target.value } : draft))
+              }
+              placeholder="Item name"
+              autoCapitalize="words"
+              required
+            />
+            <input
+              value={editInventoryItemDraft.unit}
+              onChange={(e) =>
+                setEditInventoryItemDraft((draft) =>
+                  draft ? { ...draft, unit: e.target.value.toUpperCase() } : draft
+                )
+              }
+              list="inventory-unit-options-edit"
+              placeholder="Unit (e.g., NOS, KG)"
+            />
+            <datalist id="inventory-unit-options-edit">
+              {INVENTORY_UNITS.map((unit) => (
+                <option key={unit} value={unit} />
+              ))}
+            </datalist>
+            <div className="row">
+              <button type="button" className="link" onClick={() => setEditInventoryItemDraft(null)}>
                 Cancel
               </button>
               <button type="submit">Save</button>
