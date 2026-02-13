@@ -406,6 +406,39 @@ button.link {
   padding-top: 12px;
 }
 
+.inventory-sync-panel {
+  margin: 0 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(70, 46, 28, 0.08);
+  padding: 12px;
+}
+
+.inventory-sync-active strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.inventory-sync-active .muted {
+  font-size: 12px;
+}
+
+.inventory-sync-setup .muted {
+  font-size: 12px;
+}
+
+.inventory-join-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.inventory-join-row button {
+  min-width: 72px;
+}
+
 .inventory-list {
   margin-bottom: 14px;
 }

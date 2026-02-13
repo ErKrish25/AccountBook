@@ -26,6 +26,7 @@ export type InventoryMovementType = 'in' | 'out';
 export type InventoryItem = {
   id: string;
   owner_id: string;
+  group_id: string | null;
   name: string;
   unit: string | null;
   created_at: string;
@@ -35,10 +36,19 @@ export type InventoryItem = {
 export type InventoryMovement = {
   id: string;
   owner_id: string;
+  group_id: string | null;
   item_id: string;
   type: InventoryMovementType;
   quantity: number;
   note: string | null;
   movement_date: string;
+  created_at: string;
+};
+
+export type InventorySyncGroup = {
+  id: string;
+  owner_id: string;
+  name: string;
+  join_code: string;
   created_at: string;
 };
