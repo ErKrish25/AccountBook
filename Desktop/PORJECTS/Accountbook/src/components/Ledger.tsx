@@ -128,6 +128,15 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return { totalBalance, youHaveToGet, youHaveToGive };
   }, [contactBalances]);
 
+  const receivableCount = useMemo(
+    () => contactBalances.filter((contact) => contact.balance > 0).length,
+    [contactBalances]
+  );
+  const payableCount = useMemo(
+    () => contactBalances.filter((contact) => contact.balance < 0).length,
+    [contactBalances]
+  );
+
   const filteredContacts = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     if (!query) return contactBalances;
@@ -570,27 +579,30 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   ↦
                 </button>
               </div>
-
-              <div className="summary-card">
-                <div className="summary-stats">
-                  <div>
-                    <p className="muted">You will give</p>
-                    <strong className="gave">₹{totals.youHaveToGive.toFixed(0)}</strong>
-                  </div>
-                  <div>
-                    <p className="muted">You will get</p>
-                    <strong className="get-blue">₹{totals.youHaveToGet.toFixed(0)}</strong>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <div className="home-body with-footer-space">
-              <div className="search-row">
+            <div className="home-body with-footer-space premium-body">
+              <div className="dashboard-cards">
+                <div className="metric-card payable-card">
+                  <p className="metric-label">↑ Payables</p>
+                  <strong>₹{totals.youHaveToGive.toFixed(0)}</strong>
+                  <p className="metric-sub">{payableCount} pending</p>
+                </div>
+                <div className="metric-card receivable-card">
+                  <p className="metric-label">↓ Receivables</p>
+                  <strong>₹{totals.youHaveToGet.toFixed(0)}</strong>
+                  <p className="metric-sub">{receivableCount} active</p>
+                </div>
+              </div>
+
+              <div className="search-row premium-search">
+                <span className="search-icon" aria-hidden="true">
+                  ⌕
+                </span>
                 <input
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search Customer"
+                  placeholder="Search customer..."
                   autoCapitalize="words"
                 />
               </div>
@@ -604,10 +616,12 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                       <p className="muted">{formatRelativeTime(contact.created_at)}</p>
                     </div>
                     <div className="party-balance">
-                      <strong className={contact.balance >= 0 ? 'gave' : 'got'}>
+                      <strong className={contact.balance >= 0 ? 'get-blue' : 'gave'}>
                         ₹{Math.abs(contact.balance).toFixed(0)}
                       </strong>
-                      <p className="muted">{contact.balance >= 0 ? "You'll Get" : "You'll Give"}</p>
+                      <p className={`status-pill ${contact.balance > 0 ? 'status-receive' : contact.balance < 0 ? 'status-pay' : 'status-settle'}`}>
+                        {contact.balance > 0 ? 'Receive' : contact.balance < 0 ? 'Pay' : 'Settled'}
+                      </p>
                     </div>
                   </button>
                 ))}
