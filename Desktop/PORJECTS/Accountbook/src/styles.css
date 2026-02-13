@@ -14,6 +14,7 @@
   --accent: #3b82f6;
   --radius-lg: 18px;
   --radius-md: 12px;
+  --screen-gutter: 12px;
 }
 
 * {
@@ -161,7 +162,7 @@ button.link {
     radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.18) 0%, transparent 32%),
     linear-gradient(140deg, #1f2a44 0%, #2b3d62 45%, #3a5888 100%);
   color: #ffffff;
-  padding: 17px 15px 18px;
+  padding: 14px var(--screen-gutter) 16px;
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   box-shadow:
@@ -212,7 +213,7 @@ button.link {
 }
 
 .home-body {
-  padding: 14px 0 102px;
+  padding: 12px 0 102px;
 }
 
 .with-footer-space {
@@ -221,7 +222,7 @@ button.link {
 
 .search-row {
   background: #ffffff;
-  margin: 0 12px;
+  margin: 0 var(--screen-gutter);
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 8px 22px rgba(70, 46, 28, 0.08);
@@ -257,8 +258,8 @@ button.link {
 }
 
 .party-row {
-  width: calc(100% - 24px);
-  margin: 0 12px 10px;
+  width: calc(100% - (var(--screen-gutter) * 2));
+  margin: 0 var(--screen-gutter) 10px;
   border-radius: 14px;
   border: 1px solid var(--border);
   padding: 10px 12px;
@@ -407,7 +408,7 @@ button.link {
 }
 
 .inventory-group-card {
-  margin: 0 12px;
+  margin: 0 var(--screen-gutter);
   border-radius: 14px;
   border: 1px solid var(--border);
   background: #ffffff;
@@ -473,7 +474,7 @@ button.link {
 }
 
 .inventory-sync-panel {
-  margin: 0 12px 12px;
+  margin: 0 var(--screen-gutter) 12px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: #ffffff;
@@ -514,7 +515,7 @@ button.link {
 }
 
 .inventory-movements-card {
-  margin: 0 12px;
+  margin: 0 var(--screen-gutter);
   border-radius: 14px;
   border: 1px solid var(--border);
   background: #ffffff;
@@ -564,7 +565,7 @@ button.link {
 }
 
 .inventory-action-row {
-  margin: 12px;
+  margin: 12px var(--screen-gutter);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -579,7 +580,7 @@ button.link {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 10px 12px 14px;
+  padding: 10px var(--screen-gutter) 14px;
   border-top: 1px solid #e5e7eb;
   background: rgba(255, 255, 255, 0.98);
   z-index: 22;
@@ -609,7 +610,7 @@ button.link {
   background:
     radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.16) 0%, transparent 30%),
     linear-gradient(140deg, #1f2a44 0%, #2b3d62 45%, #3a5888 100%);
-  padding: 13px 11px 15px;
+  padding: 14px var(--screen-gutter) 16px;
   box-shadow:
     0 12px 26px rgba(20, 41, 84, 0.28),
     inset 0 -1px 0 rgba(255, 255, 255, 0.14);
@@ -700,7 +701,7 @@ button.link {
 }
 
 .detail-body {
-  padding: 12px 12px 108px;
+  padding: 12px 0 108px;
 }
 
 .entry-head-row {
