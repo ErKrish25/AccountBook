@@ -152,6 +152,40 @@ create index if not exists idx_inventory_sync_group_members_group on public.inve
 create index if not exists idx_inventory_sync_groups_join_code on public.inventory_sync_groups(join_code);
 create index if not exists idx_user_profiles_display_name on public.user_profiles(lower(display_name));
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'inventory_items'
+  ) then
+    alter publication supabase_realtime add table public.inventory_items;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'inventory_movements'
+  ) then
+    alter publication supabase_realtime add table public.inventory_movements;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'inventory_sync_group_members'
+  ) then
+    alter publication supabase_realtime add table public.inventory_sync_group_members;
+  end if;
+end
+$$;
+
 alter table public.contacts enable row level security;
 alter table public.entries enable row level security;
 alter table public.inventory_items enable row level security;
