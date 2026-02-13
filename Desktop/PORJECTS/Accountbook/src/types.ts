@@ -52,3 +52,11 @@ export type InventorySyncGroup = {
   join_code: string;
   created_at: string;
 };
+
+export type InventoryGroupMember = {
+  user_id: string;
+  role: string;
+  display_name: string;
+  email: string | null;
+  joined_at: string;
+};

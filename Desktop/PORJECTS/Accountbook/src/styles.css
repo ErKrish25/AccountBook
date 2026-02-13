@@ -406,6 +406,56 @@ button.link {
   font-weight: 700;
 }
 
+.inventory-group-card {
+  margin: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(70, 46, 28, 0.08);
+  padding: 12px;
+}
+
+.inventory-group-card h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.inventory-group-members {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-group-member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.inventory-group-member-row strong {
+  font-size: 14px;
+}
+
+.inventory-group-member-row span {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.inventory-group-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inventory-group-join-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
 .inventory-summary-card {
   color: #3f4d63;
 }
@@ -501,6 +551,16 @@ button.link {
 
 .inventory-movement-right {
   text-align: right;
+}
+
+.inventory-entry-head-row {
+  margin-top: 0;
+}
+
+.inventory-entry-grid-row .entry-note {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .inventory-action-row {
@@ -763,6 +823,18 @@ button.link {
   font-size: 14px;
   font-weight: 800;
   padding: 11px 8px;
+}
+
+.inventory-detail-action-bar {
+  left: 12px;
+  right: 12px;
+  transform: none;
+  width: auto;
+  max-width: none;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
 }
 
 .give-action-btn {

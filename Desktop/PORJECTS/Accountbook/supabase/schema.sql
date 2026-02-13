@@ -261,10 +261,38 @@ begin
 end;
 $$;
 
+create or replace function public.get_inventory_group_members(target_group_id uuid)
+returns table (
+  user_id uuid,
+  role text,
+  display_name text,
+  email text,
+  joined_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    m.user_id,
+    m.role,
+    coalesce(p.display_name, 'User') as display_name,
+    p.email,
+    m.created_at as joined_at
+  from public.inventory_sync_group_members m
+  left join public.user_profiles p on p.id = m.user_id
+  where m.group_id = target_group_id
+    and public.is_inventory_group_member(target_group_id)
+  order by m.created_at asc;
+$$;
+
 revoke all on function public.find_inventory_group_by_code(text) from public;
 revoke all on function public.join_inventory_group_by_code(text) from public;
+revoke all on function public.get_inventory_group_members(uuid) from public;
 grant execute on function public.find_inventory_group_by_code(text) to authenticated;
 grant execute on function public.join_inventory_group_by_code(text) to authenticated;
+grant execute on function public.get_inventory_group_members(uuid) to authenticated;
 
 drop policy if exists "contacts_select_own" on public.contacts;
 create policy "contacts_select_own" on public.contacts

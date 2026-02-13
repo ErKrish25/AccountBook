@@ -4,6 +4,7 @@ import {
   Contact,
   Entry,
   EntryType,
+  InventoryGroupMember,
   InventoryItem,
   InventoryMovement,
   InventoryMovementType,
@@ -16,6 +17,7 @@ type LedgerProps = {
 };
 
 type AppSection = 'dashboard' | 'inventory';
+type InventoryView = 'list' | 'group';
 
 const INVENTORY_UNITS = [
   'NOS',
@@ -51,6 +53,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([]);
   const [activeInventoryGroup, setActiveInventoryGroup] = useState<InventorySyncGroup | null>(null);
+  const [inventoryGroupMembers, setInventoryGroupMembers] = useState<InventoryGroupMember[]>([]);
+  const [inventoryView, setInventoryView] = useState<InventoryView>('list');
+  const [groupNameDraft, setGroupNameDraft] = useState('');
+  const [groupJoinCode, setGroupJoinCode] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -61,6 +67,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [inventorySearchText, setInventorySearchText] = useState('');
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
   const [showAddInventoryForm, setShowAddInventoryForm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<
     | { kind: 'contact'; id: string; name: string }
     | { kind: 'entry'; id: string }
@@ -294,6 +301,20 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         ?.inventory_sync_groups;
       const membershipGroup = membershipGroupRaw ?? null;
       setActiveInventoryGroup(membershipGroup);
+      setGroupNameDraft(membershipGroup?.name ?? '');
+
+      if (membershipGroup?.id) {
+        const { data: membersData, error: membersError } = await supabase.rpc('get_inventory_group_members', {
+          target_group_id: membershipGroup.id,
+        });
+        if (membersError) {
+          setLoadError(membersError.message);
+        } else {
+          setInventoryGroupMembers((membersData ?? []) as InventoryGroupMember[]);
+        }
+      } else {
+        setInventoryGroupMembers([]);
+      }
 
       const itemsQuery = supabase.from('inventory_items').select('*').order('created_at', { ascending: false });
       const movementsQuery = supabase
@@ -416,6 +437,107 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     }
 
     setSelectedInventoryItemId('');
+    setInventoryView('list');
+    await loadData(true);
+  }
+
+  function generateJoinCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i += 1) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+
+  async function createInventoryGroup() {
+    const trimmedName = groupNameDraft.trim() || `${displayName}'s Group`;
+
+    const { data: groupData, error: groupError } = await supabase
+      .from('inventory_sync_groups')
+      .insert({
+        owner_id: userId,
+        name: trimmedName,
+        join_code: generateJoinCode(),
+      })
+      .select('*')
+      .single();
+
+    if (groupError || !groupData) {
+      alert(groupError?.message ?? 'Failed to create group');
+      return;
+    }
+
+    const { error: memberError } = await supabase.from('inventory_sync_group_members').insert({
+      group_id: groupData.id,
+      user_id: userId,
+      role: 'owner',
+    });
+
+    if (memberError) {
+      alert(memberError.message);
+      return;
+    }
+
+    await loadData(true);
+  }
+
+  async function joinInventoryGroup() {
+    const code = groupJoinCode.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    if (!code) {
+      alert('Enter a group code');
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('join_inventory_group_by_code', { input_code: code });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    if (!data) {
+      alert('Group code not found');
+      return;
+    }
+
+    setGroupJoinCode('');
+    await loadData(true);
+  }
+
+  async function saveGroupName() {
+    if (!activeInventoryGroup) return;
+    const trimmedName = groupNameDraft.trim();
+    if (!trimmedName) {
+      alert('Group name cannot be empty');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('inventory_sync_groups')
+      .update({ name: trimmedName })
+      .eq('id', activeInventoryGroup.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    await loadData(true);
+  }
+
+  async function deleteGroup() {
+    if (!activeInventoryGroup) return;
+    const { error } = await supabase
+      .from('inventory_sync_groups')
+      .delete()
+      .eq('id', activeInventoryGroup.id)
+      .eq('owner_id', userId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setInventoryView('list');
     await loadData(true);
   }
 
@@ -674,7 +796,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 <div className="brand-row">
                   <h2>{displayName}</h2>
                 </div>
-                <button className="icon-btn" onClick={signOut} aria-label="Sign out">
+                <button className="icon-btn" onClick={() => setShowLogoutConfirm(true)} aria-label="Sign out">
                   ↦
                 </button>
               </div>
@@ -845,6 +967,86 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             </div>
           </section>
         )
+      ) : inventoryView === 'group' ? (
+        <section className="ledger-home inventory-home">
+          <div className="home-top inventory-top">
+            <div className="home-header-row">
+              <div className="brand-row">
+                <h2>Inventory Group</h2>
+              </div>
+              <button className="icon-btn" onClick={() => setInventoryView('list')} aria-label="Back to inventory">
+                ←
+              </button>
+            </div>
+          </div>
+
+          <div className="home-body inventory-body with-footer-space">
+            {activeInventoryGroup ? (
+              <div className="inventory-group-card stack">
+                <h4>Group Info</h4>
+                <p className="muted">Code: {activeInventoryGroup.join_code}</p>
+                <input
+                  value={groupNameDraft}
+                  onChange={(e) => setGroupNameDraft(e.target.value)}
+                  placeholder="Group name"
+                  autoCapitalize="words"
+                  disabled={activeInventoryGroup.owner_id !== userId}
+                />
+                {activeInventoryGroup.owner_id === userId && (
+                  <button type="button" onClick={() => void saveGroupName()}>
+                    Save Group Name
+                  </button>
+                )}
+
+                <h4>Users In Group</h4>
+                <div className="inventory-group-members">
+                  {inventoryGroupMembers.map((member) => (
+                    <div key={member.user_id} className="inventory-group-member-row">
+                      <strong>{member.display_name}</strong>
+                      <span>{member.role}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="inventory-group-actions">
+                  <button type="button" className="add-party-cancel-btn" onClick={() => void leaveInventorySyncGroup()}>
+                    Leave Group
+                  </button>
+                  {activeInventoryGroup.owner_id === userId && (
+                    <button type="button" className="danger-solid" onClick={() => void deleteGroup()}>
+                      Delete Group
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="inventory-group-card stack">
+                <h4>No Active Group</h4>
+                <p className="muted">Create a new group or join with code.</p>
+                <input
+                  value={groupNameDraft}
+                  onChange={(e) => setGroupNameDraft(e.target.value)}
+                  placeholder="Group name"
+                  autoCapitalize="words"
+                />
+                <button type="button" onClick={() => void createInventoryGroup()}>
+                  Create Group
+                </button>
+                <div className="inventory-group-join-row">
+                  <input
+                    value={groupJoinCode}
+                    onChange={(e) => setGroupJoinCode(e.target.value)}
+                    placeholder="Enter code"
+                    autoCapitalize="characters"
+                  />
+                  <button type="button" onClick={() => void joinInventoryGroup()}>
+                    Join
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       ) : !selectedInventoryItem ? (
         <section className="ledger-home inventory-home">
           <div className="home-top inventory-top">
@@ -853,17 +1055,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 <h2>Inventory</h2>
               </div>
               <div className="inventory-header-actions">
-                {activeInventoryGroup && (
-                  <button
-                    type="button"
-                    className="inventory-leave-btn"
-                    onClick={() => void leaveInventorySyncGroup()}
-                  >
-                    Leave Group
-                  </button>
-                )}
-                <button className="icon-btn" onClick={signOut} aria-label="Sign out">
-                  ↦
+                <button type="button" className="inventory-leave-btn" onClick={() => setInventoryView('group')}>
+                  Group
                 </button>
               </div>
             </div>
@@ -989,32 +1182,32 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           </div>
 
           <div className="detail-body with-footer-space">
-            <div className="inventory-movements-card">
-              <h4>Item Movements</h4>
-              <div className="inventory-movement-list">
-                {selectedInventoryMovements.map((movement) => (
-                  <div key={movement.id} className="inventory-movement-row">
-                    <div>
-                      <strong>{movement.type === 'in' ? 'Stock In' : 'Stock Out'}</strong>
-                      <p className="muted">{movement.note ?? 'No note'}</p>
-                    </div>
-                    <div className="inventory-movement-right">
-                      <strong className={movement.type === 'in' ? 'gave' : 'got'}>
-                        {movement.type === 'in' ? '+' : '-'}
-                        {movement.quantity.toFixed(2)}
-                      </strong>
-                      <p className="muted">{movement.movement_date}</p>
-                    </div>
+            <div className="entry-head-row inventory-entry-head-row">
+              <span>Date & Note</span>
+              <span>Stock In</span>
+              <span>Stock Out</span>
+            </div>
+
+            <div className="entries detail-entries">
+              {selectedInventoryMovements.map((movement) => (
+                <div key={movement.id} className="entry-grid-row inventory-entry-grid-row">
+                  <div className="entry-left">
+                    <p className="entry-time">{formatEntryDate(movement.created_at)}</p>
+                    <p className="entry-note">{movement.note ?? 'No note'}</p>
                   </div>
-                ))}
-                {selectedInventoryMovements.length === 0 && (
-                  <p className="muted empty-text">No stock movement yet.</p>
-                )}
-              </div>
+                  <div className="entry-mid">
+                    {movement.type === 'in' && <strong className="gave">{movement.quantity.toFixed(2)}</strong>}
+                  </div>
+                  <div className="entry-right">
+                    {movement.type === 'out' && <strong className="got">{movement.quantity.toFixed(2)}</strong>}
+                  </div>
+                </div>
+              ))}
+              {selectedInventoryMovements.length === 0 && <p className="muted empty-text">No stock movement yet.</p>}
             </div>
           </div>
 
-          <div className="detail-action-bar">
+          <div className="detail-action-bar inventory-detail-action-bar">
             <button className="give-action-btn" onClick={() => startInventoryMovement('in')}>
               STOCK IN
             </button>
@@ -1248,6 +1441,30 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               </button>
               <button type="button" className="danger-solid" onClick={() => void confirmDeleteDialog()}>
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLogoutConfirm && (
+        <div className="entry-edit-overlay">
+          <div className="entry-edit-modal stack">
+            <h4>Log out?</h4>
+            <p className="muted">Are you sure you want to log out of this account?</p>
+            <div className="row">
+              <button type="button" className="link" onClick={() => setShowLogoutConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="danger-solid"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  void signOut();
+                }}
+              >
+                Log out
               </button>
             </div>
           </div>
