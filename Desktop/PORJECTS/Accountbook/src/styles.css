@@ -240,6 +240,37 @@ button.link {
   box-shadow: none;
 }
 
+.inventory-category-strip {
+  margin: 10px var(--screen-gutter) 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inventory-category-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.inventory-category-strip button {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #d3deef;
+  background: #e6eef9;
+  color: #2e4b77;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.inventory-category-strip button.active {
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
+  color: #ffffff;
+  border-color: transparent;
+}
+
 .icon-btn {
   background: transparent;
   border: none;
@@ -641,6 +672,7 @@ button.link {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  cursor: pointer;
 }
 
 .invoice-history-meta {

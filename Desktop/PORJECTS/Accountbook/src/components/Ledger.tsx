@@ -1665,18 +1665,24 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 autoCapitalize="words"
               />
             </div>
-            <div className="search-row">
-              <select
-                value={inventoryCategoryFilter}
-                onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+            <div className="inventory-category-strip">
+              <button
+                type="button"
+                className={inventoryCategoryFilter === 'ALL' ? 'active' : ''}
+                onClick={() => setInventoryCategoryFilter('ALL')}
               >
-                <option value="ALL">All Categories</option>
-                {inventoryCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+                All
+              </button>
+              {inventoryCategories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={inventoryCategoryFilter === category ? 'active' : ''}
+                  onClick={() => setInventoryCategoryFilter(category)}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
 
             <div className="party-list inventory-list">
