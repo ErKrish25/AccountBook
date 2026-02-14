@@ -240,43 +240,35 @@ button.link {
   box-shadow: none;
 }
 
-.inventory-filter-row {
+.inventory-category-strip {
   margin: 10px var(--screen-gutter) 0;
   display: flex;
   gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.inventory-filter-row input {
-  flex: 1;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: #54647f;
-  background: #ffffff;
+.inventory-category-strip::-webkit-scrollbar {
+  display: none;
 }
 
-.inventory-filter-add {
-  width: 42px;
-  border-radius: 12px;
-  border: 1px solid #1d375f;
-  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0;
-}
-
-.inventory-filter-clear {
-  border-radius: 12px;
+.inventory-category-strip button {
+  flex: 0 0 auto;
+  border-radius: 999px;
   border: 1px solid #d3deef;
   background: #e6eef9;
   color: #2e4b77;
   font-size: 13px;
   font-weight: 700;
-  padding: 0 12px;
+  padding: 8px 12px;
   white-space: nowrap;
+}
+
+.inventory-category-strip button.active {
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .icon-btn {
@@ -948,11 +940,11 @@ button.link {
 
 .detail-action-bar {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  transform: none;
-  width: auto;
-  max-width: none;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: min(460px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
   bottom: max(12px, env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid #e5e7eb;
@@ -975,15 +967,17 @@ button.link {
 }
 
 .inventory-detail-action-bar {
-  left: 12px;
-  right: 12px;
-  transform: none;
-  width: auto;
-  max-width: none;
-  bottom: max(12px, env(safe-area-inset-bottom));
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+
+.inventory-detail-action-bar .give-action-btn {
+  background: linear-gradient(135deg, #1e7a56 0%, #2e9b70 100%);
+}
+
+.inventory-detail-action-bar .get-action-btn {
+  background: linear-gradient(135deg, #b4233a 0%, #d83a52 100%);
 }
 
 .give-action-btn {

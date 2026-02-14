@@ -72,8 +72,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
-  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
-  const [inventoryCategoryFilterDraft, setInventoryCategoryFilterDraft] = useState('');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL');
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>('purchase');
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [invoiceParty, setInvoiceParty] = useState('');
@@ -230,7 +229,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return inventoryItemsWithStock.filter((item) => {
       const matchesText = !query || item.name.toLowerCase().includes(query);
       const matchesCategory =
-        !inventoryCategoryFilter ||
+        inventoryCategoryFilter === 'ALL' ||
         (item.category ?? '').toLowerCase() === inventoryCategoryFilter.toLowerCase();
       return matchesText && matchesCategory;
     });
@@ -1760,39 +1759,24 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 autoCapitalize="words"
               />
             </div>
-            <div className="inventory-filter-row">
-              <input
-                value={inventoryCategoryFilterDraft}
-                onChange={(e) => setInventoryCategoryFilterDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setInventoryCategoryFilter(inventoryCategoryFilterDraft.trim());
-                  }
-                }}
-                placeholder="Type category to filter"
-                autoCapitalize="words"
-              />
+            <div className="inventory-category-strip">
               <button
                 type="button"
-                className="inventory-filter-add"
-                onClick={() => setInventoryCategoryFilter(inventoryCategoryFilterDraft.trim())}
-                aria-label="Apply category filter"
+                className={inventoryCategoryFilter === 'ALL' ? 'active' : ''}
+                onClick={() => setInventoryCategoryFilter('ALL')}
               >
-                +
+                All
               </button>
-              {inventoryCategoryFilter && (
+              {inventoryCategories.map((category) => (
                 <button
+                  key={category}
                   type="button"
-                  className="inventory-filter-clear"
-                  onClick={() => {
-                    setInventoryCategoryFilter('');
-                    setInventoryCategoryFilterDraft('');
-                  }}
+                  className={inventoryCategoryFilter === category ? 'active' : ''}
+                  onClick={() => setInventoryCategoryFilter(category)}
                 >
-                  Clear
+                  {category}
                 </button>
-              )}
+              ))}
             </div>
 
             <div className="party-list inventory-list">
