@@ -53,24 +53,6 @@ const INVENTORY_UNITS = [
   'TON',
 ];
 
-const INVENTORY_CATEGORIES = [
-  'Crops & Produce',
-  'Seeds',
-  'Fertilizers',
-  'Pesticides',
-  'Equipment & Tools',
-  'Irrigation Supplies',
-  'Fuel & Consumables',
-  'Packaging & Storage',
-  'Spare Parts',
-  'Raw Materials',
-  'Soil Conditioners',
-  'Animal Feed',
-  'Nursery & Saplings',
-  'Harvest Supplies',
-  'Post-Harvest Inputs',
-];
-
 export function Ledger({ userId, displayName }: LedgerProps) {
   const [section, setSection] = useState<AppSection>('dashboard');
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -90,7 +72,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
-  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
+  const [inventoryCategoryFilterDraft, setInventoryCategoryFilterDraft] = useState('');
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>('purchase');
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [invoiceParty, setInvoiceParty] = useState('');
@@ -247,30 +230,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return inventoryItemsWithStock.filter((item) => {
       const matchesText = !query || item.name.toLowerCase().includes(query);
       const matchesCategory =
-        inventoryCategoryFilter === 'ALL' ||
+        !inventoryCategoryFilter ||
         (item.category ?? '').toLowerCase() === inventoryCategoryFilter.toLowerCase();
       return matchesText && matchesCategory;
     });
   }, [inventoryItemsWithStock, inventorySearchText, inventoryCategoryFilter]);
 
   const inventoryCategories = useMemo(() => {
-    const existing = new Set(
-      inventoryItems
-        .map((item) => (item.category ?? '').trim())
-        .filter(Boolean)
+    return [...new Set(inventoryItems.map((item) => (item.category ?? '').trim()).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b)
     );
-    const ordered: string[] = [];
-    for (const category of INVENTORY_CATEGORIES) {
-      if (existing.has(category)) {
-        ordered.push(category);
-        existing.delete(category);
-      } else {
-        ordered.push(category);
-      }
-    }
-
-    const extras = [...existing].sort((a, b) => a.localeCompare(b));
-    return [...ordered, ...extras];
   }, [inventoryItems]);
 
   const inventoryTotals = useMemo(() => {
@@ -942,6 +911,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
     const payload = [];
     let invoiceTotal = 0;
+    const invoiceItemTotals = new Map<string, { name: string; quantity: number }>();
     for (const line of invoiceLines) {
       const quantity = Number(line.quantity);
       const rate = Number(line.rate);
@@ -960,6 +930,14 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       }
 
       invoiceTotal += quantity * rate;
+      const summaryKey = item.name.toLowerCase();
+      const existingSummary = invoiceItemTotals.get(summaryKey);
+      if (existingSummary) {
+        existingSummary.quantity += quantity;
+      } else {
+        invoiceItemTotals.set(summaryKey, { name: item.name, quantity });
+      }
+
       const invoiceLineNote = [
         `INV:${invoiceId}`,
         `TYPE:${invoiceKind}`,
@@ -993,6 +971,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
+    const invoiceItemSummary = Array.from(invoiceItemTotals.values())
+      .map(({ name, quantity }) => `${name} x ${formatCompactQuantity(quantity)}`)
+      .join(', ');
+
     const settlementAmount = Number(invoiceSettlementAmount || '0');
     if (Number.isNaN(settlementAmount) || settlementAmount < 0) {
       alert('Enter valid paid/received amount');
@@ -1022,7 +1004,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         contact_id: contactId,
         type: invoiceKind === 'sale' ? 'gave' : 'got',
         amount: Number(receivablePayableAmount.toFixed(2)),
-        note: invoiceKind === 'sale' ? 'Sales Invoice' : 'Purchase Invoice',
+        note:
+          invoiceKind === 'sale'
+            ? `Sales: ${invoiceItemSummary || 'Invoice'}`
+            : `Purchase: ${invoiceItemSummary || 'Invoice'}`,
         entry_date: invoiceDate,
       });
     }
@@ -1033,7 +1018,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         contact_id: contactId,
         type: invoiceKind === 'sale' ? 'got' : 'gave',
         amount: Number(settlementAmount.toFixed(2)),
-        note: invoiceKind === 'sale' ? 'Amount Received' : 'Amount Paid',
+        note:
+          invoiceKind === 'sale'
+            ? `Received: ${invoiceItemSummary || 'Invoice'}`
+            : `Paid: ${invoiceItemSummary || 'Invoice'}`,
         entry_date: invoiceDate,
       });
     }
@@ -1312,14 +1300,76 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return `${typeLabel} • ${party}`;
   }
 
+  function formatCompactQuantity(value: number): string {
+    if (Number.isInteger(value)) return String(value);
+    return value.toFixed(2).replace(/\.?0+$/, '');
+  }
+
+  function summarizeInvoiceMovements(invoiceId: string): string | null {
+    const relatedMovements = inventoryMovements.filter((movement) => movement.note?.startsWith(`INV:${invoiceId}|`));
+    if (relatedMovements.length === 0) return null;
+
+    const itemNames = new Map(inventoryItems.map((item) => [item.id, item.name]));
+    const totals = new Map<string, { name: string; quantity: number }>();
+    for (const movement of relatedMovements) {
+      const fields = Object.fromEntries(
+        (movement.note ?? '')
+          .split('|')
+          .map((part) => {
+            const idx = part.indexOf(':');
+            if (idx <= 0) return null;
+            return [part.slice(0, idx), part.slice(idx + 1)];
+          })
+          .filter(Boolean) as Array<[string, string]>
+      );
+      const fallbackName = itemNames.get(movement.item_id) ?? 'Item';
+      const itemName = (fields.ITEM ?? fallbackName).trim() || fallbackName;
+      const key = itemName.toLowerCase();
+      const prev = totals.get(key);
+      if (prev) {
+        prev.quantity += movement.quantity;
+      } else {
+        totals.set(key, { name: itemName, quantity: movement.quantity });
+      }
+    }
+
+    const summaryParts = Array.from(totals.values()).map(
+      ({ name, quantity }) => `${name} x ${formatCompactQuantity(quantity)}`
+    );
+
+    if (summaryParts.length <= 3) return summaryParts.join(', ');
+    return `${summaryParts.slice(0, 3).join(', ')} +${summaryParts.length - 3} more`;
+  }
+
   function formatLedgerNote(note: string | null): string {
     if (!note) return 'No note';
     const normalized = note.trim();
     if (!normalized) return 'No note';
-    if (/^purchase invoice /i.test(normalized)) return 'Purchase Invoice';
-    if (/^sales invoice /i.test(normalized)) return 'Sales Invoice';
-    if (/^received against invoice /i.test(normalized)) return 'Amount Received';
-    if (/^paid against invoice /i.test(normalized)) return 'Amount Paid';
+
+    const purchaseMatch = normalized.match(/^purchase invoice\s+([a-z]{3}-\d+)/i);
+    if (purchaseMatch) {
+      const summary = summarizeInvoiceMovements(purchaseMatch[1].toUpperCase());
+      return summary ? `Purchase: ${summary}` : 'Purchase Invoice';
+    }
+
+    const saleMatch = normalized.match(/^sales invoice\s+([a-z]{3}-\d+)/i);
+    if (saleMatch) {
+      const summary = summarizeInvoiceMovements(saleMatch[1].toUpperCase());
+      return summary ? `Sales: ${summary}` : 'Sales Invoice';
+    }
+
+    const receivedMatch = normalized.match(/^received against invoice\s+([a-z]{3}-\d+)/i);
+    if (receivedMatch) {
+      const summary = summarizeInvoiceMovements(receivedMatch[1].toUpperCase());
+      return summary ? `Received: ${summary}` : 'Amount Received';
+    }
+
+    const paidMatch = normalized.match(/^paid against invoice\s+([a-z]{3}-\d+)/i);
+    if (paidMatch) {
+      const summary = summarizeInvoiceMovements(paidMatch[1].toUpperCase());
+      return summary ? `Paid: ${summary}` : 'Amount Paid';
+    }
+
     return normalized;
   }
 
@@ -1710,24 +1760,39 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 autoCapitalize="words"
               />
             </div>
-            <div className="inventory-category-strip">
+            <div className="inventory-filter-row">
+              <input
+                value={inventoryCategoryFilterDraft}
+                onChange={(e) => setInventoryCategoryFilterDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setInventoryCategoryFilter(inventoryCategoryFilterDraft.trim());
+                  }
+                }}
+                placeholder="Type category to filter"
+                autoCapitalize="words"
+              />
               <button
                 type="button"
-                className={inventoryCategoryFilter === 'ALL' ? 'active' : ''}
-                onClick={() => setInventoryCategoryFilter('ALL')}
+                className="inventory-filter-add"
+                onClick={() => setInventoryCategoryFilter(inventoryCategoryFilterDraft.trim())}
+                aria-label="Apply category filter"
               >
-                All
+                +
               </button>
-              {inventoryCategories.map((category) => (
+              {inventoryCategoryFilter && (
                 <button
-                  key={category}
                   type="button"
-                  className={inventoryCategoryFilter === category ? 'active' : ''}
-                  onClick={() => setInventoryCategoryFilter(category)}
+                  className="inventory-filter-clear"
+                  onClick={() => {
+                    setInventoryCategoryFilter('');
+                    setInventoryCategoryFilterDraft('');
+                  }}
                 >
-                  {category}
+                  Clear
                 </button>
-              ))}
+              )}
             </div>
 
             <div className="party-list inventory-list">
@@ -1911,34 +1976,58 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           <button
             type="button"
             className={section === 'dashboard' ? 'active' : ''}
+            aria-label="Home"
             onClick={() => {
               setSelectedInventoryItemId('');
               setSection('dashboard');
             }}
           >
-            Main Dashboard
+            <span className="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M3.5 10.5 12 3.5l8.5 7v9.5a.5.5 0 0 1-.5.5h-5.5v-6h-5v6H4a.5.5 0 0 1-.5-.5z" />
+              </svg>
+            </span>
           </button>
           <button
             type="button"
             className={section === 'inventory' ? 'active' : ''}
+            aria-label="Inventories"
             onClick={() => {
               setSelectedContactId('');
               setSelectedInventoryItemId('');
               setSection('inventory');
             }}
           >
-            Inventories
+            <span className="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M4 4v16" />
+                <path d="M7 4v16" />
+                <path d="M10 4v16" />
+                <path d="M14 4v16" />
+                <path d="M18 4v16" />
+                <path d="M20 4v16" />
+              </svg>
+            </span>
           </button>
           <button
             type="button"
             className={section === 'invoices' ? 'active' : ''}
+            aria-label="Invoices"
             onClick={() => {
               setSelectedContactId('');
               setSelectedInventoryItemId('');
               setSection('invoices');
             }}
           >
-            Invoices
+            <span className="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M6.5 2.5h9l3.5 3.5V19a2.5 2.5 0 0 1-2.5 2.5H6.5A2.5 2.5 0 0 1 4 19V5A2.5 2.5 0 0 1 6.5 2.5z" />
+                <path d="M15.5 2.5V6h3.5" />
+                <path d="M8 10h8" />
+                <path d="M8 13h8" />
+                <path d="M8 16h6" />
+              </svg>
+            </span>
           </button>
         </div>
       )}
