@@ -62,6 +62,7 @@ create table if not exists public.inventory_items (
   name text not null,
   unit text,
   category text,
+  barcode text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -98,6 +99,9 @@ alter table public.inventory_items
 
 alter table public.inventory_items
   add column if not exists category text;
+
+alter table public.inventory_items
+  add column if not exists barcode text;
 
 alter table public.inventory_movements
   add column if not exists group_id uuid references public.inventory_sync_groups(id) on delete set null;
@@ -160,6 +164,13 @@ create index if not exists idx_inventory_items_owner on public.inventory_items(o
 create index if not exists idx_inventory_items_group on public.inventory_items(group_id);
 create index if not exists idx_inventory_items_owner_name on public.inventory_items(owner_id, lower(name));
 create index if not exists idx_inventory_items_owner_category on public.inventory_items(owner_id, lower(category));
+create index if not exists idx_inventory_items_barcode on public.inventory_items(barcode);
+create unique index if not exists idx_inventory_items_owner_barcode_unique
+  on public.inventory_items(owner_id, barcode)
+  where barcode is not null and group_id is null;
+create unique index if not exists idx_inventory_items_group_barcode_unique
+  on public.inventory_items(group_id, barcode)
+  where barcode is not null and group_id is not null;
 create index if not exists idx_inventory_movements_owner on public.inventory_movements(owner_id);
 create index if not exists idx_inventory_movements_group on public.inventory_movements(group_id);
 create index if not exists idx_inventory_movements_item on public.inventory_movements(item_id);

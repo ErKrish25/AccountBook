@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Contact,
@@ -120,6 +120,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     name: string;
     unit: string;
     category: string;
+    barcode: string;
   } | null>(null);
   const [entryDraft, setEntryDraft] = useState<{
     type: EntryType;
@@ -137,10 +138,12 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     name: string;
     unit: string;
     category: string;
+    barcode: string;
   }>({
     name: '',
     unit: 'NOS',
     category: '',
+    barcode: '',
   });
   const [entryActionDraft, setEntryActionDraft] = useState<{
     id: string;
@@ -156,6 +159,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     type: InventoryMovementType;
     movementDate: string;
   } | null>(null);
+  const [barcodeScanTarget, setBarcodeScanTarget] = useState<'search' | 'add-item' | 'edit-item' | null>(null);
+  const [barcodeScanError, setBarcodeScanError] = useState<string | null>(null);
+  const scannerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerStreamRef = useRef<MediaStream | null>(null);
 
   const selectedEntries = useMemo(
     () => entries.filter((entry) => entry.contact_id === selectedContactId),
@@ -241,7 +248,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const filteredInventoryItems = useMemo(() => {
     const query = inventorySearchText.trim().toLowerCase();
     return inventoryItemsWithStock.filter((item) => {
-      const matchesText = !query || item.name.toLowerCase().includes(query);
+      const matchesText =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        (item.barcode ?? '').toLowerCase().includes(query);
       const matchesCategory =
         inventoryCategoryFilter === 'ALL' ||
         (item.category ?? '').toLowerCase() === inventoryCategoryFilter.toLowerCase();
@@ -754,6 +764,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       name: trimmedName,
       unit: inventoryItemDraft.unit.trim().toUpperCase() || null,
       category: resolvedCategory || null,
+      barcode: inventoryItemDraft.barcode.trim() || null,
     });
 
     if (error) {
@@ -761,7 +772,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
-    setInventoryItemDraft({ name: '', unit: 'NOS', category: '' });
+    setInventoryItemDraft({ name: '', unit: 'NOS', category: '', barcode: '' });
     setInventoryCategoryCustom('');
     setShowAddInventoryForm(false);
     await loadData(true);
@@ -997,6 +1008,119 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await supabase.auth.signOut();
   }
 
+  function closeBarcodeScanner() {
+    scannerStreamRef.current?.getTracks().forEach((track) => track.stop());
+    scannerStreamRef.current = null;
+    setBarcodeScanTarget(null);
+    setBarcodeScanError(null);
+  }
+
+  function applyScannedBarcode(rawValue: string) {
+    const barcode = rawValue.trim();
+    if (!barcode) return;
+
+    if (barcodeScanTarget === 'search') {
+      setInventorySearchText(barcode);
+      const matchedItem = inventoryItems.find((item) => (item.barcode ?? '').toLowerCase() === barcode.toLowerCase());
+      if (matchedItem) {
+        setSelectedInventoryItemId(matchedItem.id);
+      }
+      closeBarcodeScanner();
+      return;
+    }
+
+    if (barcodeScanTarget === 'add-item') {
+      setInventoryItemDraft((draft) => ({ ...draft, barcode }));
+      closeBarcodeScanner();
+      return;
+    }
+
+    if (barcodeScanTarget === 'edit-item') {
+      setEditInventoryItemDraft((draft) => (draft ? { ...draft, barcode } : draft));
+      closeBarcodeScanner();
+    }
+  }
+
+  async function openBarcodeScanner(target: 'search' | 'add-item' | 'edit-item') {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      alert('Camera access is not available on this device.');
+      return;
+    }
+
+    if (!('BarcodeDetector' in window)) {
+      alert('Barcode scan is not supported in this browser.');
+      return;
+    }
+
+    setBarcodeScanError(null);
+    setBarcodeScanTarget(target);
+  }
+
+  useEffect(() => {
+    if (!barcodeScanTarget) return;
+
+    let disposed = false;
+    let detectTimer: number | null = null;
+
+    const bootScanner = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        });
+
+        if (disposed) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        scannerStreamRef.current = stream;
+        const video = scannerVideoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+
+        const DetectorCtor = (window as Window & { BarcodeDetector?: new (...args: any[]) => any }).BarcodeDetector;
+        if (!DetectorCtor) {
+          setBarcodeScanError('Barcode detector is not supported in this browser.');
+          return;
+        }
+
+        const detector = new DetectorCtor({
+          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'],
+        });
+
+        detectTimer = window.setInterval(async () => {
+          if (disposed || !scannerVideoRef.current) return;
+
+          try {
+            const results = await detector.detect(scannerVideoRef.current);
+            const scannedValue = results?.[0]?.rawValue;
+            if (scannedValue) {
+              applyScannedBarcode(scannedValue);
+            }
+          } catch {
+            // Continue scanning loop; camera stream is still active.
+          }
+        }, 280);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to open camera';
+        setBarcodeScanError(message);
+      }
+    };
+
+    void bootScanner();
+
+    return () => {
+      disposed = true;
+      if (detectTimer) {
+        window.clearInterval(detectTimer);
+      }
+      scannerStreamRef.current?.getTracks().forEach((track) => track.stop());
+      scannerStreamRef.current = null;
+    };
+  }, [barcodeScanTarget, inventoryItems]);
+
   function editSelectedContact() {
     if (!selectedContact) return;
 
@@ -1044,6 +1168,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       name: selectedInventoryItem.name,
       unit: selectedInventoryItem.unit ?? 'NOS',
       category: selectedInventoryItem.category ?? '',
+      barcode: selectedInventoryItem.barcode ?? '',
     });
     setEditInventoryCategoryCustom('');
   }
@@ -1067,6 +1192,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         name: trimmedName,
         unit: editInventoryItemDraft.unit.trim().toUpperCase() || null,
         category: resolvedCategory || null,
+        barcode: editInventoryItemDraft.barcode.trim() || null,
       })
       .eq('id', editInventoryItemDraft.id);
 
@@ -1226,16 +1352,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     if (hrs < 24) return `${hrs} hours ago`;
     const days = Math.floor(hrs / 24);
     return `${days} days ago`;
-  }
-
-  function formatEntryDate(value: string): string {
-    return new Date(value).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   }
 
   function formatDateDDMMYY(value: string): string {
@@ -1715,13 +1831,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           </div>
 
           <div className="home-body inventory-body with-footer-space">
-            <div className="search-row">
+            <div className="search-row search-row-with-action">
               <input
                 value={inventorySearchText}
                 onChange={(e) => setInventorySearchText(e.target.value)}
-                placeholder="Search Item"
+                placeholder="Search item or barcode"
                 autoCapitalize="words"
               />
+              <button type="button" className="scan-inline-btn" onClick={() => void openBarcodeScanner('search')}>
+                Scan
+              </button>
             </div>
             <div className="inventory-category-strip">
               <button
@@ -1757,6 +1876,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     <p className="muted">
                       Unit: {item.unit ?? 'NOS'}
                       {item.category ? ` • ${item.category}` : ''}
+                      {item.barcode ? ` • #${item.barcode}` : ''}
                     </p>
                   </div>
                   <div className="party-balance">
@@ -1781,6 +1901,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     autoCapitalize="words"
                     required
                   />
+                  <div className="search-row search-row-with-action">
+                    <input
+                      value={inventoryItemDraft.barcode}
+                      onChange={(e) =>
+                        setInventoryItemDraft((draft) => ({ ...draft, barcode: e.target.value }))
+                      }
+                      placeholder="Barcode (optional)"
+                    />
+                    <button type="button" className="scan-inline-btn" onClick={() => void openBarcodeScanner('add-item')}>
+                      Scan
+                    </button>
+                  </div>
                   <div className="inventory-form-row">
                     <select
                       value={inventoryItemDraft.unit}
@@ -1825,7 +1957,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                       onClick={() => {
                         setShowAddInventoryForm(false);
                         setInventoryCategoryCustom('');
-                        setInventoryItemDraft((draft) => ({ ...draft, category: '' }));
+                        setInventoryItemDraft((draft) => ({ ...draft, category: '', barcode: '' }));
                       }}
                     >
                       Cancel
@@ -1868,6 +2000,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 <div>
                   <h3>{selectedInventoryItem.name}</h3>
                   <p>{selectedInventoryItem.unit ?? 'NOS'}</p>
+                  {selectedInventoryItem.barcode && <p>#{selectedInventoryItem.barcode}</p>}
                 </div>
               </div>
             </div>
@@ -2467,6 +2600,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               autoCapitalize="words"
               required
             />
+            <div className="search-row search-row-with-action">
+              <input
+                value={editInventoryItemDraft.barcode}
+                onChange={(e) =>
+                  setEditInventoryItemDraft((draft) => (draft ? { ...draft, barcode: e.target.value } : draft))
+                }
+                placeholder="Barcode (optional)"
+              />
+              <button type="button" className="scan-inline-btn" onClick={() => void openBarcodeScanner('edit-item')}>
+                Scan
+              </button>
+            </div>
             <div className="inventory-form-row">
               <select
                 value={editInventoryItemDraft.unit}
@@ -2525,6 +2670,22 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               <button type="submit">Save</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {barcodeScanTarget && (
+        <div className="entry-edit-overlay">
+          <div className="entry-edit-modal stack">
+            <h4>Scan Barcode</h4>
+            <p className="muted">Point camera at the barcode.</p>
+            <video ref={scannerVideoRef} className="barcode-video" autoPlay playsInline muted />
+            {barcodeScanError && <p className="muted">{barcodeScanError}</p>}
+            <div className="row">
+              <button type="button" className="link" onClick={() => closeBarcodeScanner()}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

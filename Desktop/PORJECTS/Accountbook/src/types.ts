@@ -35,6 +35,7 @@ export type InventoryItem = {
   name: string;
   unit: string | null;
   category: string | null;
+  barcode: string | null;
   created_at: string;
   updated_at: string;
 };
