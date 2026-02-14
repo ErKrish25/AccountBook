@@ -50,6 +50,7 @@ create table if not exists public.inventory_items (
   owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   unit text,
+  category text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -83,6 +84,9 @@ create table if not exists public.inventory_sync_group_members (
 
 alter table public.inventory_items
   add column if not exists group_id uuid references public.inventory_sync_groups(id) on delete set null;
+
+alter table public.inventory_items
+  add column if not exists category text;
 
 alter table public.inventory_movements
   add column if not exists group_id uuid references public.inventory_sync_groups(id) on delete set null;
@@ -143,6 +147,7 @@ create index if not exists idx_entries_contact on public.entries(contact_id);
 create index if not exists idx_inventory_items_owner on public.inventory_items(owner_id);
 create index if not exists idx_inventory_items_group on public.inventory_items(group_id);
 create index if not exists idx_inventory_items_owner_name on public.inventory_items(owner_id, lower(name));
+create index if not exists idx_inventory_items_owner_category on public.inventory_items(owner_id, lower(category));
 create index if not exists idx_inventory_movements_owner on public.inventory_movements(owner_id);
 create index if not exists idx_inventory_movements_group on public.inventory_movements(group_id);
 create index if not exists idx_inventory_movements_item on public.inventory_movements(item_id);

@@ -72,6 +72,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL');
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>('purchase');
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [invoiceParty, setInvoiceParty] = useState('');
@@ -79,6 +80,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [invoiceSettlementAmount, setInvoiceSettlementAmount] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [invoiceLines, setInvoiceLines] = useState<InvoiceLineDraft[]>([]);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [invoiceActionTargetId, setInvoiceActionTargetId] = useState<string | null>(null);
   const [invoiceLineDraft, setInvoiceLineDraft] = useState<InvoiceLineDraft>({
     item_id: '',
     quantity: '',
@@ -101,6 +104,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     id: string;
     name: string;
     unit: string;
+    category: string;
   } | null>(null);
   const [entryDraft, setEntryDraft] = useState<{
     type: EntryType;
@@ -117,9 +121,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [inventoryItemDraft, setInventoryItemDraft] = useState<{
     name: string;
     unit: string;
+    category: string;
   }>({
     name: '',
     unit: 'NOS',
+    category: '',
   });
   const [entryActionDraft, setEntryActionDraft] = useState<{
     id: string;
@@ -218,10 +224,20 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
   const filteredInventoryItems = useMemo(() => {
     const query = inventorySearchText.trim().toLowerCase();
-    if (!query) return inventoryItemsWithStock;
+    return inventoryItemsWithStock.filter((item) => {
+      const matchesText = !query || item.name.toLowerCase().includes(query);
+      const matchesCategory =
+        inventoryCategoryFilter === 'ALL' ||
+        (item.category ?? '').toLowerCase() === inventoryCategoryFilter.toLowerCase();
+      return matchesText && matchesCategory;
+    });
+  }, [inventoryItemsWithStock, inventorySearchText, inventoryCategoryFilter]);
 
-    return inventoryItemsWithStock.filter((item) => item.name.toLowerCase().includes(query));
-  }, [inventoryItemsWithStock, inventorySearchText]);
+  const inventoryCategories = useMemo(() => {
+    return [...new Set(inventoryItems.map((item) => (item.category ?? '').trim()).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [inventoryItems]);
 
   const inventoryTotals = useMemo(() => {
     const totalUnits = inventoryItemsWithStock.reduce((total, item) => total + item.stock, 0);
@@ -645,6 +661,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       group_id: activeInventoryGroup?.id ?? null,
       name: trimmedName,
       unit: inventoryItemDraft.unit.trim().toUpperCase() || null,
+      category: inventoryItemDraft.category.trim() || null,
     });
 
     if (error) {
@@ -652,7 +669,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
-    setInventoryItemDraft({ name: '', unit: 'NOS' });
+    setInventoryItemDraft({ name: '', unit: 'NOS', category: '' });
     setShowAddInventoryForm(false);
     await loadData(true);
   }
@@ -736,6 +753,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     setInvoiceLines((prev) => prev.filter((_, idx) => idx !== index));
   }
 
+  function openNewInvoiceForm() {
+    setEditingInvoiceId(null);
+    setInvoiceParty('');
+    setInvoiceNote('');
+    setInvoiceSettlementAmount('');
+    setInvoiceDate(new Date().toISOString().slice(0, 10));
+    setInvoiceLines([]);
+    setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
+    setShowInvoiceForm(true);
+  }
+
   async function findOrCreateContactIdByName(rawName: string): Promise<string | null> {
     const partyName = rawName.trim();
     if (!partyName) return null;
@@ -761,6 +789,97 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return data.id as string;
   }
 
+  async function deleteInvoiceRecords(invoiceId: string): Promise<boolean> {
+    const { error: movementError } = await supabase
+      .from('inventory_movements')
+      .delete()
+      .eq('owner_id', userId)
+      .like('note', `INV:${invoiceId}|%`);
+
+    if (movementError) {
+      alert(movementError.message);
+      return false;
+    }
+
+    const { error: entryError } = await supabase
+      .from('entries')
+      .delete()
+      .eq('owner_id', userId)
+      .ilike('note', `%${invoiceId}%`);
+
+    if (entryError) {
+      alert(entryError.message);
+      return false;
+    }
+
+    return true;
+  }
+
+  function openInvoiceEditor(invoiceId: string) {
+    const invoiceMovements = inventoryMovements.filter((movement) => movement.note?.startsWith(`INV:${invoiceId}|`));
+    if (invoiceMovements.length === 0) {
+      alert('Invoice details not found');
+      return;
+    }
+
+    const firstNote = invoiceMovements[0].note ?? '';
+    const fields = Object.fromEntries(
+      firstNote
+        .split('|')
+        .map((part) => {
+          const idx = part.indexOf(':');
+          if (idx <= 0) return null;
+          return [part.slice(0, idx), part.slice(idx + 1)];
+        })
+        .filter(Boolean) as Array<[string, string]>
+    );
+
+    const kind: InvoiceKind = fields.TYPE === 'sale' ? 'sale' : 'purchase';
+    const lineDrafts: InvoiceLineDraft[] = invoiceMovements.map((movement) => {
+      const noteFields = Object.fromEntries(
+        (movement.note ?? '')
+          .split('|')
+          .map((part) => {
+            const idx = part.indexOf(':');
+            if (idx <= 0) return null;
+            return [part.slice(0, idx), part.slice(idx + 1)];
+          })
+          .filter(Boolean) as Array<[string, string]>
+      );
+
+      return {
+        item_id: movement.item_id,
+        quantity: String(movement.quantity),
+        rate: String(Number(noteFields.RATE ?? '0')),
+      };
+    });
+
+    const relatedEntries = entries.filter((entry) => (entry.note ?? '').includes(invoiceId));
+    const settlementType: EntryType = kind === 'sale' ? 'got' : 'gave';
+    const settlement = relatedEntries
+      .filter((entry) => entry.type === settlementType)
+      .reduce((sum, entry) => sum + entry.amount, 0);
+
+    setInvoiceKind(kind);
+    setEditingInvoiceId(invoiceId);
+    setInvoiceParty(fields.PARTY ?? '');
+    setInvoiceNote(fields.NOTE ?? '');
+    setInvoiceDate(invoiceMovements[0].movement_date);
+    setInvoiceSettlementAmount(settlement > 0 ? settlement.toFixed(2) : '');
+    setInvoiceLines(lineDrafts);
+    setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
+    setInvoiceActionTargetId(null);
+    setShowInvoiceForm(true);
+  }
+
+  async function deleteInvoice(invoiceId: string) {
+    if (!window.confirm('Delete this invoice permanently?')) return;
+    const ok = await deleteInvoiceRecords(invoiceId);
+    if (!ok) return;
+    setInvoiceActionTargetId(null);
+    await loadData(true);
+  }
+
   async function saveInvoice() {
     if (invoiceLines.length === 0) {
       alert('Add at least one line');
@@ -772,13 +891,14 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
-    const invoiceId = `${invoiceKind === 'purchase' ? 'PUR' : 'SAL'}-${Date.now()
-      .toString()
-      .slice(-8)}`;
+    const invoiceId =
+      editingInvoiceId ??
+      `${invoiceKind === 'purchase' ? 'PUR' : 'SAL'}-${Date.now()
+        .toString()
+        .slice(-8)}`;
     const movementType: InventoryMovementType = invoiceKind === 'purchase' ? 'in' : 'out';
     const normalizedNote = invoiceNote.trim();
 
-    const stockByItem = new Map(inventoryItemsWithStock.map((item) => [item.id, item.stock]));
     const itemsById = new Map(inventoryItems.map((item) => [item.id, item]));
 
     const payload = [];
@@ -798,14 +918,6 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       if (!item) {
         alert('Selected item not found');
         return;
-      }
-
-      if (movementType === 'out') {
-        const available = stockByItem.get(line.item_id) ?? 0;
-        if (quantity > available) {
-          alert(`Not enough stock for ${item.name}. Available: ${available.toFixed(2)}`);
-          return;
-        }
       }
 
       invoiceTotal += quantity * rate;
@@ -829,6 +941,11 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         note: invoiceLineNote,
         movement_date: invoiceDate,
       });
+    }
+
+    if (editingInvoiceId) {
+      const ok = await deleteInvoiceRecords(editingInvoiceId);
+      if (!ok) return;
     }
 
     const { error } = await supabase.from('inventory_movements').insert(payload);
@@ -866,7 +983,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         contact_id: contactId,
         type: invoiceKind === 'sale' ? 'gave' : 'got',
         amount: Number(receivablePayableAmount.toFixed(2)),
-        note: `${invoiceKind === 'sale' ? 'Sales' : 'Purchase'} invoice ${invoiceId}`,
+        note: invoiceKind === 'sale' ? 'Sales Invoice' : 'Purchase Invoice',
         entry_date: invoiceDate,
       });
     }
@@ -877,7 +994,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
         contact_id: contactId,
         type: invoiceKind === 'sale' ? 'got' : 'gave',
         amount: Number(settlementAmount.toFixed(2)),
-        note: `${invoiceKind === 'sale' ? 'Received' : 'Paid'} against invoice ${invoiceId}`,
+        note: invoiceKind === 'sale' ? 'Amount Received' : 'Amount Paid',
         entry_date: invoiceDate,
       });
     }
@@ -895,6 +1012,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     setInvoiceParty('');
     setInvoiceNote('');
     setInvoiceSettlementAmount('');
+    setEditingInvoiceId(null);
     setInvoiceDate(new Date().toISOString().slice(0, 10));
     setShowInvoiceForm(false);
     await loadData(true);
@@ -948,6 +1066,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       id: selectedInventoryItem.id,
       name: selectedInventoryItem.name,
       unit: selectedInventoryItem.unit ?? 'NOS',
+      category: selectedInventoryItem.category ?? '',
     });
   }
 
@@ -965,6 +1084,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       .update({
         name: trimmedName,
         unit: editInventoryItemDraft.unit.trim().toUpperCase() || null,
+        category: editInventoryItemDraft.category.trim() || null,
       })
       .eq('id', editInventoryItemDraft.id);
 
@@ -1125,6 +1245,37 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  function formatMovementNote(note: string | null): string {
+    if (!note) return 'No note';
+    if (!note.startsWith('INV:')) return note;
+
+    const fields = Object.fromEntries(
+      note
+        .split('|')
+        .map((part) => {
+          const idx = part.indexOf(':');
+          if (idx <= 0) return null;
+          return [part.slice(0, idx), part.slice(idx + 1)];
+        })
+        .filter(Boolean) as Array<[string, string]>
+    );
+
+    const typeLabel = fields.TYPE === 'sale' ? 'Sale' : 'Purchase';
+    const party = fields.PARTY?.trim() || 'Party';
+    return `${typeLabel} • ${party}`;
+  }
+
+  function formatLedgerNote(note: string | null): string {
+    if (!note) return 'No note';
+    const normalized = note.trim();
+    if (!normalized) return 'No note';
+    if (/^purchase invoice /i.test(normalized)) return 'Purchase Invoice';
+    if (/^sales invoice /i.test(normalized)) return 'Sales Invoice';
+    if (/^received against invoice /i.test(normalized)) return 'Amount Received';
+    if (/^paid against invoice /i.test(normalized)) return 'Amount Paid';
+    return normalized;
   }
 
   const showFooter =
@@ -1288,7 +1439,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     <div className="entry-left">
                       <p className="entry-time">{formatEntryDate(entry.created_at)}</p>
                       <p className="entry-balance-tag">Bal. ₹{entry.runningBalance.toFixed(0)}</p>
-                      <p className="entry-note">{entry.note ?? 'No note'}</p>
+                      <p className="entry-note">{formatLedgerNote(entry.note)}</p>
                     </div>
                     <div className="entry-mid">
                       {entry.type === 'gave' && <strong className="got">₹{entry.amount.toFixed(0)}</strong>}
@@ -1319,7 +1470,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               <div className="brand-row">
                 <h2>Invoices</h2>
               </div>
-              <button type="button" className="inventory-leave-btn" onClick={() => setShowInvoiceForm(true)}>
+              <button type="button" className="inventory-leave-btn" onClick={() => openNewInvoiceForm()}>
                 + New
               </button>
             </div>
@@ -1362,7 +1513,19 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
             <div className="invoice-history-list">
               {invoiceHistory.map((invoice) => (
-                <div key={invoice.id} className="invoice-history-card">
+                <div
+                  key={invoice.id}
+                  className="invoice-history-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setInvoiceActionTargetId(invoice.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setInvoiceActionTargetId(invoice.id);
+                    }
+                  }}
+                >
                   <div>
                     <strong>{invoice.id}</strong>
                     <p className="muted">{invoice.party}</p>
@@ -1376,7 +1539,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               {invoiceHistory.length === 0 && <p className="muted empty-text">No invoices yet.</p>}
             </div>
 
-            <button className="fab-add with-footer" onClick={() => setShowInvoiceForm(true)}>
+            <button className="fab-add with-footer" onClick={() => openNewInvoiceForm()}>
               + New Invoice
             </button>
           </div>
@@ -1502,6 +1665,19 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 autoCapitalize="words"
               />
             </div>
+            <div className="search-row">
+              <select
+                value={inventoryCategoryFilter}
+                onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+              >
+                <option value="ALL">All Categories</option>
+                {inventoryCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="party-list inventory-list">
               {filteredInventoryItems.map((item) => (
@@ -1514,7 +1690,10 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <div className="party-avatar">{item.name[0]?.toUpperCase() ?? '?'}</div>
                   <div className="party-main">
                     <strong>{item.name}</strong>
-                    <p className="muted">Unit: {item.unit ?? 'NOS'}</p>
+                    <p className="muted">
+                      Unit: {item.unit ?? 'NOS'}
+                      {item.category ? ` • ${item.category}` : ''}
+                    </p>
                   </div>
                   <div className="party-balance">
                     <strong className={item.stock > 0 ? 'gave' : 'got'}>{item.stock.toFixed(2)}</strong>
@@ -1538,19 +1717,24 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     autoCapitalize="words"
                     required
                   />
-                  <input
+                  <select
                     value={inventoryItemDraft.unit}
                     onChange={(e) =>
                       setInventoryItemDraft((draft) => ({ ...draft, unit: e.target.value.toUpperCase() }))
                     }
-                    list="inventory-unit-options"
-                    placeholder="Unit (e.g., NOS, KG)"
-                  />
-                  <datalist id="inventory-unit-options">
+                  >
                     {INVENTORY_UNITS.map((unit) => (
                       <option key={unit} value={unit} />
                     ))}
-                  </datalist>
+                  </select>
+                  <input
+                    value={inventoryItemDraft.category}
+                    onChange={(e) =>
+                      setInventoryItemDraft((draft) => ({ ...draft, category: e.target.value }))
+                    }
+                    placeholder="Category (e.g., Fertilizer)"
+                    autoCapitalize="words"
+                  />
                   <div className="row">
                     <button type="button" className="add-party-cancel-btn" onClick={() => setShowAddInventoryForm(false)}>
                       Cancel
@@ -1621,7 +1805,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 >
                   <div className="entry-left">
                     <p className="entry-time">{formatEntryDate(movement.created_at)}</p>
-                    <p className="entry-note">{movement.note ?? 'No note'}</p>
+                    <p className="entry-note">{formatMovementNote(movement.note)}</p>
                   </div>
                   <div className="entry-mid">
                     {movement.type === 'in' && <strong className="gave">{movement.quantity.toFixed(2)}</strong>}
@@ -1692,7 +1876,13 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               void saveInvoice();
             }}
           >
-            <h4>{invoiceKind === 'purchase' ? 'New Purchase Invoice' : 'New Sales Invoice'}</h4>
+            <h4>
+              {editingInvoiceId
+                ? `Edit ${invoiceKind === 'purchase' ? 'Purchase' : 'Sales'} Invoice`
+                : invoiceKind === 'purchase'
+                  ? 'New Purchase Invoice'
+                  : 'New Sales Invoice'}
+            </h4>
             <input
               value={invoiceParty}
               onChange={(e) => setInvoiceParty(e.target.value)}
@@ -1772,6 +1962,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 className="link"
                 onClick={() => {
                   setShowInvoiceForm(false);
+                  setEditingInvoiceId(null);
                   setInvoiceLines([]);
                   setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
                   setInvoiceSettlementAmount('');
@@ -1779,9 +1970,29 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               >
                 Cancel
               </button>
-              <button type="submit">Save Invoice</button>
+              <button type="submit">{editingInvoiceId ? 'Update Invoice' : 'Save Invoice'}</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {invoiceActionTargetId && (
+        <div className="entry-edit-overlay">
+          <div className="entry-edit-modal stack">
+            <h4>Invoice Actions</h4>
+            <p className="muted">{invoiceActionTargetId}</p>
+            <div className="row">
+              <button type="button" className="link" onClick={() => setInvoiceActionTargetId(null)}>
+                Cancel
+              </button>
+              <button type="button" onClick={() => openInvoiceEditor(invoiceActionTargetId)}>
+                Edit
+              </button>
+              <button type="button" className="danger-solid" onClick={() => void deleteInvoice(invoiceActionTargetId)}>
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2087,21 +2298,31 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               autoCapitalize="words"
               required
             />
-            <input
+            <select
               value={editInventoryItemDraft.unit}
               onChange={(e) =>
                 setEditInventoryItemDraft((draft) =>
                   draft ? { ...draft, unit: e.target.value.toUpperCase() } : draft
                 )
               }
-              list="inventory-unit-options-edit"
-              placeholder="Unit (e.g., NOS, KG)"
-            />
-            <datalist id="inventory-unit-options-edit">
+            >
+              {!INVENTORY_UNITS.includes(editInventoryItemDraft.unit) && (
+                <option value={editInventoryItemDraft.unit}>{editInventoryItemDraft.unit}</option>
+              )}
               {INVENTORY_UNITS.map((unit) => (
                 <option key={unit} value={unit} />
               ))}
-            </datalist>
+            </select>
+            <input
+              value={editInventoryItemDraft.category}
+              onChange={(e) =>
+                setEditInventoryItemDraft((draft) =>
+                  draft ? { ...draft, category: e.target.value } : draft
+                )
+              }
+              placeholder="Category (e.g., Fertilizer)"
+              autoCapitalize="words"
+            />
             <div className="row">
               <button type="button" className="link" onClick={() => setEditInventoryItemDraft(null)}>
                 Cancel

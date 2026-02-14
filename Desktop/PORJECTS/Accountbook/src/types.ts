@@ -29,6 +29,7 @@ export type InventoryItem = {
   group_id: string | null;
   name: string;
   unit: string | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
 };
