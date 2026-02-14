@@ -1,7 +1,10 @@
+export type ContactCategory = 'sundry_creditor' | 'sundry_debtor' | 'individual';
+
 export type Contact = {
   id: string;
   name: string;
   phone: string | null;
+  category: ContactCategory;
   created_at: string;
 };
 

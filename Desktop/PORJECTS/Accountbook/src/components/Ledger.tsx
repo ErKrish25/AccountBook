@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Contact,
+  ContactCategory,
   Entry,
   EntryType,
   Invoice,
@@ -55,6 +56,12 @@ const INVENTORY_UNITS = [
   'TON',
 ];
 
+const CONTACT_CATEGORIES: Array<{ value: ContactCategory; label: string }> = [
+  { value: 'sundry_creditor', label: 'Sundry Creditor' },
+  { value: 'sundry_debtor', label: 'Sundry Debtor' },
+  { value: 'individual', label: 'Individual' },
+];
+
 export function Ledger({ userId, displayName }: LedgerProps) {
   const [section, setSection] = useState<AppSection>('dashboard');
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -74,6 +81,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [contactCategory, setContactCategory] = useState<ContactCategory>('individual');
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL');
@@ -105,6 +113,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     id: string;
     name: string;
     phone: string;
+    category: ContactCategory;
   } | null>(null);
   const [editInventoryItemDraft, setEditInventoryItemDraft] = useState<{
     id: string;
@@ -267,6 +276,14 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return movement.type === 'in' ? total + movement.quantity : total - movement.quantity;
     }, 0);
   }, [selectedInventoryMovements]);
+
+  const invoicePartyRequiredCategory: ContactCategory =
+    invoiceKind === 'purchase' ? 'sundry_creditor' : 'sundry_debtor';
+
+  const invoiceEligibleContacts = useMemo(
+    () => contacts.filter((contact) => contact.category === invoicePartyRequiredCategory),
+    [contacts, invoicePartyRequiredCategory]
+  );
 
   const invoiceHistory = useMemo(() => {
     const linesByInvoiceId = new Map<string, InvoiceLine[]>();
@@ -554,6 +571,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       owner_id: userId,
       name: name.trim(),
       phone: phone.trim() || null,
+      category: contactCategory,
     });
 
     if (error) {
@@ -563,6 +581,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
 
     setName('');
     setPhone('');
+    setContactCategory('individual');
     setShowAddPartyForm(false);
     await loadData(true);
   }
@@ -882,6 +901,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       alert('Enter party name');
       return;
     }
+    const existingParty = contacts.find(
+      (contact) => contact.name.trim().toLowerCase() === normalizedParty.toLowerCase()
+    );
+    if (existingParty && existingParty.category !== invoicePartyRequiredCategory) {
+      alert(
+        `This party is ${formatContactCategory(existingParty.category)}. ` +
+          `${invoiceKind === 'purchase' ? 'Purchase' : 'Sales'} invoice allows only ${formatContactCategory(
+            invoicePartyRequiredCategory
+          )}.`
+      );
+      return;
+    }
 
     const itemsById = new Map(inventoryItems.map((item) => [item.id, item]));
     const normalizedNote = invoiceNote.trim();
@@ -962,6 +993,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       id: selectedContact.id,
       name: selectedContact.name,
       phone: selectedContact.phone ?? '',
+      category: selectedContact.category,
     });
   }
 
@@ -979,6 +1011,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       .update({
         name: trimmedName,
         phone: editContactDraft.phone.trim() || null,
+        category: editContactDraft.category,
       })
       .eq('id', editContactDraft.id)
       .eq('owner_id', userId);
@@ -1209,6 +1242,12 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     return `${dd}-${mm}-${yy}`;
   }
 
+  function formatContactCategory(value: ContactCategory): string {
+    if (value === 'sundry_creditor') return 'Sundry Creditor';
+    if (value === 'sundry_debtor') return 'Sundry Debtor';
+    return 'Individual';
+  }
+
   function formatMovementNote(note: string | null): string {
     if (!note) return 'No note';
     if (!note.startsWith('INV:')) return note;
@@ -1338,7 +1377,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     <div className="party-avatar">{contact.name[0]?.toUpperCase() ?? '?'}</div>
                     <div className="party-main">
                       <strong>{contact.name}</strong>
-                      <p className="muted">{formatRelativeTime(contact.created_at)}</p>
+                      <p className="muted">
+                        {formatContactCategory(contact.category)} • {formatRelativeTime(contact.created_at)}
+                      </p>
                     </div>
                     <div className="party-balance">
                       <strong className={contact.balance >= 0 ? 'gave' : 'got'}>
@@ -1367,8 +1408,22 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Phone (optional)"
                     />
+                    <select value={contactCategory} onChange={(e) => setContactCategory(e.target.value as ContactCategory)}>
+                      {CONTACT_CATEGORIES.map((entry) => (
+                        <option key={entry.value} value={entry.value}>
+                          {entry.label}
+                        </option>
+                      ))}
+                    </select>
                     <div className="row">
-                      <button type="button" className="add-party-cancel-btn" onClick={() => setShowAddPartyForm(false)}>
+                      <button
+                        type="button"
+                        className="add-party-cancel-btn"
+                        onClick={() => {
+                          setShowAddPartyForm(false);
+                          setContactCategory('individual');
+                        }}
+                      >
                         Cancel
                       </button>
                       <button type="submit" className="add-party-save-btn">
@@ -1406,6 +1461,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   <div className="party-avatar detail-avatar">{selectedContact.name[0]?.toUpperCase() ?? '?'}</div>
                   <div>
                     <h3>{selectedContact.name}</h3>
+                    <p>{formatContactCategory(selectedContact.category)}</p>
                     {selectedContact.phone && <p>{selectedContact.phone}</p>}
                   </div>
                 </div>
@@ -1935,8 +1991,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               value={invoiceParty}
               onChange={(e) => setInvoiceParty(e.target.value)}
               placeholder={invoiceKind === 'purchase' ? 'Supplier name' : 'Customer name'}
+              list="invoice-party-list"
               autoCapitalize="words"
             />
+            <datalist id="invoice-party-list">
+              {invoiceEligibleContacts.map((contact) => (
+                <option key={contact.id} value={contact.name} />
+              ))}
+            </datalist>
+            <p className="muted">
+              Allowed parties: {formatContactCategory(invoicePartyRequiredCategory)}
+            </p>
             <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
             <input
               value={invoiceNote}
@@ -2337,6 +2402,20 @@ export function Ledger({ userId, displayName }: LedgerProps) {
               }
               placeholder="Mobile number (optional)"
             />
+            <select
+              value={editContactDraft.category}
+              onChange={(e) =>
+                setEditContactDraft((draft) =>
+                  draft ? { ...draft, category: e.target.value as ContactCategory } : draft
+                )
+              }
+            >
+              {CONTACT_CATEGORIES.map((entry) => (
+                <option key={entry.value} value={entry.value}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
             <div className="row">
               <button
                 type="button"

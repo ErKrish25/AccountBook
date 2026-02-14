@@ -12,6 +12,17 @@ create table if not exists public.contacts (
 
 do $$
 begin
+  create type public.contact_category as enum ('sundry_creditor', 'sundry_debtor', 'individual');
+exception
+  when duplicate_object then null;
+end
+$$;
+
+alter table public.contacts
+  add column if not exists category public.contact_category not null default 'individual';
+
+do $$
+begin
   create type public.entry_type as enum ('gave', 'got');
 exception
   when duplicate_object then null;
@@ -142,6 +153,7 @@ end
 $$;
 
 create index if not exists idx_contacts_owner on public.contacts(owner_id);
+create index if not exists idx_contacts_owner_category on public.contacts(owner_id, category);
 create index if not exists idx_entries_owner on public.entries(owner_id);
 create index if not exists idx_entries_contact on public.entries(contact_id);
 create index if not exists idx_inventory_items_owner on public.inventory_items(owner_id);
@@ -792,6 +804,8 @@ declare
   caller_user_id uuid;
   normalized_party text;
   target_contact_id uuid;
+  target_contact_category public.contact_category;
+  required_contact_category public.contact_category;
   target_invoice_id uuid;
   line jsonb;
   line_item_id uuid;
@@ -826,21 +840,30 @@ begin
     raise exception 'Not allowed to post in this group';
   end if;
 
+  required_contact_category := case
+    when p_kind = 'purchase' then 'sundry_creditor'::public.contact_category
+    else 'sundry_debtor'::public.contact_category
+  end;
+
   if p_replace_invoice_id is not null then
     perform public.cancel_invoice(p_replace_invoice_id, 'Replaced by invoice edit');
   end if;
 
-  select c.id
-  into target_contact_id
+  select c.id, c.category
+  into target_contact_id, target_contact_category
   from public.contacts c
   where c.owner_id = caller_user_id
     and lower(c.name) = lower(normalized_party)
   limit 1;
 
   if target_contact_id is null then
-    insert into public.contacts (owner_id, name, phone)
-    values (caller_user_id, normalized_party, null)
+    insert into public.contacts (owner_id, name, phone, category)
+    values (caller_user_id, normalized_party, null, required_contact_category)
     returning id into target_contact_id;
+  elsif target_contact_category <> required_contact_category then
+    raise exception 'Party category mismatch. % invoice requires % party.',
+      initcap(p_kind::text),
+      replace(required_contact_category::text, '_', ' ');
   end if;
 
   insert into public.invoices (
