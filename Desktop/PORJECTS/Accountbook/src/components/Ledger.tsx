@@ -285,6 +285,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     [contacts, invoicePartyRequiredCategory]
   );
 
+  useEffect(() => {
+    if (!showInvoiceForm) return;
+    if (!invoiceParty) return;
+    const allowed = invoiceEligibleContacts.some(
+      (contact) => contact.name.trim().toLowerCase() === invoiceParty.trim().toLowerCase()
+    );
+    if (!allowed) {
+      setInvoiceParty('');
+    }
+  }, [invoiceEligibleContacts, invoiceParty, showInvoiceForm]);
+
   const invoiceHistory = useMemo(() => {
     const linesByInvoiceId = new Map<string, InvoiceLine[]>();
     for (const line of invoiceLinesData) {
@@ -1987,18 +1998,16 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                   ? 'New Purchase Invoice'
                   : 'New Sales Invoice'}
             </h4>
-            <input
-              value={invoiceParty}
-              onChange={(e) => setInvoiceParty(e.target.value)}
-              placeholder={invoiceKind === 'purchase' ? 'Supplier name' : 'Customer name'}
-              list="invoice-party-list"
-              autoCapitalize="words"
-            />
-            <datalist id="invoice-party-list">
+            <select value={invoiceParty} onChange={(e) => setInvoiceParty(e.target.value)} required>
+              <option value="">
+                {invoiceKind === 'purchase' ? 'Select Sundry Creditor' : 'Select Sundry Debtor'}
+              </option>
               {invoiceEligibleContacts.map((contact) => (
-                <option key={contact.id} value={contact.name} />
+                <option key={contact.id} value={contact.name}>
+                  {contact.name}
+                </option>
               ))}
-            </datalist>
+            </select>
             <p className="muted">
               Allowed parties: {formatContactCategory(invoicePartyRequiredCategory)}
             </p>
