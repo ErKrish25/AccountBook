@@ -583,7 +583,7 @@ button.link {
   bottom: 0;
   width: min(460px, 100%);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   padding: 10px var(--screen-gutter) 14px;
   border-top: 1px solid #e5e7eb;
@@ -604,6 +604,81 @@ button.link {
   background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
   color: #ffffff;
   border-color: transparent;
+}
+
+.invoice-kind-toggle {
+  margin: 0 var(--screen-gutter);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.invoice-kind-toggle button {
+  background: #e6eef9;
+  color: #2e4b77;
+  border: 1px solid #d3deef;
+}
+
+.invoice-kind-toggle button.active {
+  background: linear-gradient(135deg, #1d375f 0%, #315a94 100%);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.invoice-history-list {
+  margin-top: 12px;
+}
+
+.invoice-history-card {
+  width: calc(100% - (var(--screen-gutter) * 2));
+  margin: 0 var(--screen-gutter) 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(70, 46, 28, 0.08);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.invoice-history-meta {
+  text-align: right;
+}
+
+.invoice-history-meta p {
+  margin: 0;
+}
+
+.invoice-history-meta strong {
+  font-size: 15px;
+}
+
+.invoice-line-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.invoice-line-row button {
+  padding: 10px 12px;
+}
+
+.invoice-line-list {
+  display: grid;
+  gap: 6px;
+}
+
+.invoice-line-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .ledger-detail {
@@ -936,6 +1011,14 @@ button.link {
 
   .entry-edit-modal {
     width: 100%;
+  }
+
+  .invoice-line-row {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-line-item {
+    grid-template-columns: 1fr;
   }
 
   .fab-add {

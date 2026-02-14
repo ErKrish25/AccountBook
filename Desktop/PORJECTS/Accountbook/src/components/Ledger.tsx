@@ -16,8 +16,15 @@ type LedgerProps = {
   displayName: string;
 };
 
-type AppSection = 'dashboard' | 'inventory';
+type AppSection = 'dashboard' | 'inventory' | 'invoices';
 type InventoryView = 'list' | 'group';
+type InvoiceKind = 'purchase' | 'sale';
+
+type InvoiceLineDraft = {
+  item_id: string;
+  quantity: string;
+  rate: string;
+};
 
 const INVENTORY_UNITS = [
   'NOS',
@@ -65,6 +72,18 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   const [phone, setPhone] = useState('');
   const [searchText, setSearchText] = useState('');
   const [inventorySearchText, setInventorySearchText] = useState('');
+  const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>('purchase');
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [invoiceParty, setInvoiceParty] = useState('');
+  const [invoiceNote, setInvoiceNote] = useState('');
+  const [invoiceSettlementAmount, setInvoiceSettlementAmount] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [invoiceLines, setInvoiceLines] = useState<InvoiceLineDraft[]>([]);
+  const [invoiceLineDraft, setInvoiceLineDraft] = useState<InvoiceLineDraft>({
+    item_id: '',
+    quantity: '',
+    rate: '',
+  });
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
   const [showAddInventoryForm, setShowAddInventoryForm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -225,6 +244,65 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return movement.type === 'in' ? total + movement.quantity : total - movement.quantity;
     }, 0);
   }, [selectedInventoryMovements]);
+
+  const invoiceHistory = useMemo(() => {
+    const invoiceMap = new Map<
+      string,
+      {
+        id: string;
+        kind: InvoiceKind;
+        party: string;
+        date: string;
+        totalQty: number;
+        totalValue: number;
+        lineCount: number;
+      }
+    >();
+
+    for (const movement of inventoryMovements) {
+      if (!movement.note?.startsWith('INV:')) continue;
+      const parts = movement.note.split('|');
+      const fields = Object.fromEntries(
+        parts
+          .map((part) => {
+            const idx = part.indexOf(':');
+            if (idx <= 0) return null;
+            return [part.slice(0, idx), part.slice(idx + 1)];
+          })
+          .filter(Boolean) as Array<[string, string]>
+      );
+
+      const invoiceId = fields.INV;
+      if (!invoiceId) continue;
+
+      const kind: InvoiceKind =
+        fields.TYPE === 'sale' || movement.type === 'out' ? 'sale' : 'purchase';
+      const rate = Number(fields.RATE ?? '0');
+      const qty = Number(movement.quantity);
+      const value = Number.isFinite(rate) ? rate * qty : 0;
+
+      const existing = invoiceMap.get(invoiceId);
+      if (existing) {
+        existing.totalQty += qty;
+        existing.totalValue += value;
+        existing.lineCount += 1;
+      } else {
+        invoiceMap.set(invoiceId, {
+          id: invoiceId,
+          kind,
+          party: fields.PARTY || 'Walk-in',
+          date: movement.movement_date,
+          totalQty: qty,
+          totalValue: value,
+          lineCount: 1,
+        });
+      }
+    }
+
+    return [...invoiceMap.values()]
+      .filter((invoice) => invoice.kind === invoiceKind)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [inventoryMovements, invoiceKind]);
 
   useEffect(() => {
     void loadData();
@@ -634,6 +712,194 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     await loadData(true);
   }
 
+  function addInvoiceLine() {
+    if (!invoiceLineDraft.item_id) {
+      alert('Select an item');
+      return;
+    }
+    const quantity = Number(invoiceLineDraft.quantity);
+    const rate = Number(invoiceLineDraft.rate);
+    if (Number.isNaN(quantity) || quantity <= 0) {
+      alert('Enter valid quantity');
+      return;
+    }
+    if (Number.isNaN(rate) || rate < 0) {
+      alert('Enter valid rate');
+      return;
+    }
+
+    setInvoiceLines((prev) => [...prev, { ...invoiceLineDraft }]);
+    setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
+  }
+
+  function removeInvoiceLine(index: number) {
+    setInvoiceLines((prev) => prev.filter((_, idx) => idx !== index));
+  }
+
+  async function findOrCreateContactIdByName(rawName: string): Promise<string | null> {
+    const partyName = rawName.trim();
+    if (!partyName) return null;
+
+    const existing = contacts.find((contact) => contact.name.trim().toLowerCase() === partyName.toLowerCase());
+    if (existing) return existing.id;
+
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert({
+        owner_id: userId,
+        name: partyName,
+        phone: null,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      alert(error.message);
+      return null;
+    }
+
+    return data.id as string;
+  }
+
+  async function saveInvoice() {
+    if (invoiceLines.length === 0) {
+      alert('Add at least one line');
+      return;
+    }
+    const normalizedParty = invoiceParty.trim();
+    if (!normalizedParty) {
+      alert('Enter party name');
+      return;
+    }
+
+    const invoiceId = `${invoiceKind === 'purchase' ? 'PUR' : 'SAL'}-${Date.now()
+      .toString()
+      .slice(-8)}`;
+    const movementType: InventoryMovementType = invoiceKind === 'purchase' ? 'in' : 'out';
+    const normalizedNote = invoiceNote.trim();
+
+    const stockByItem = new Map(inventoryItemsWithStock.map((item) => [item.id, item.stock]));
+    const itemsById = new Map(inventoryItems.map((item) => [item.id, item]));
+
+    const payload = [];
+    let invoiceTotal = 0;
+    for (const line of invoiceLines) {
+      const quantity = Number(line.quantity);
+      const rate = Number(line.rate);
+      if (Number.isNaN(quantity) || quantity <= 0) {
+        alert('Invalid quantity in invoice lines');
+        return;
+      }
+      if (Number.isNaN(rate) || rate < 0) {
+        alert('Invalid rate in invoice lines');
+        return;
+      }
+      const item = itemsById.get(line.item_id);
+      if (!item) {
+        alert('Selected item not found');
+        return;
+      }
+
+      if (movementType === 'out') {
+        const available = stockByItem.get(line.item_id) ?? 0;
+        if (quantity > available) {
+          alert(`Not enough stock for ${item.name}. Available: ${available.toFixed(2)}`);
+          return;
+        }
+      }
+
+      invoiceTotal += quantity * rate;
+      const invoiceLineNote = [
+        `INV:${invoiceId}`,
+        `TYPE:${invoiceKind}`,
+        `PARTY:${normalizedParty}`,
+        `RATE:${rate.toFixed(2)}`,
+        `ITEM:${item.name}`,
+        normalizedNote ? `NOTE:${normalizedNote}` : '',
+      ]
+        .filter(Boolean)
+        .join('|');
+
+      payload.push({
+        owner_id: userId,
+        group_id: item.group_id ?? null,
+        item_id: item.id,
+        type: movementType,
+        quantity,
+        note: invoiceLineNote,
+        movement_date: invoiceDate,
+      });
+    }
+
+    const { error } = await supabase.from('inventory_movements').insert(payload);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    const settlementAmount = Number(invoiceSettlementAmount || '0');
+    if (Number.isNaN(settlementAmount) || settlementAmount < 0) {
+      alert('Enter valid paid/received amount');
+      return;
+    }
+    if (settlementAmount > invoiceTotal) {
+      alert('Paid/received amount cannot be more than invoice total');
+      return;
+    }
+
+    const receivablePayableAmount = Math.max(0, invoiceTotal - settlementAmount);
+    const contactId = await findOrCreateContactIdByName(normalizedParty);
+    if (!contactId) return;
+
+    const customerEntriesPayload: Array<{
+      owner_id: string;
+      contact_id: string;
+      type: EntryType;
+      amount: number;
+      note: string;
+      entry_date: string;
+    }> = [];
+
+    if (receivablePayableAmount > 0) {
+      customerEntriesPayload.push({
+        owner_id: userId,
+        contact_id: contactId,
+        type: invoiceKind === 'sale' ? 'gave' : 'got',
+        amount: Number(receivablePayableAmount.toFixed(2)),
+        note: `${invoiceKind === 'sale' ? 'Sales' : 'Purchase'} invoice ${invoiceId}`,
+        entry_date: invoiceDate,
+      });
+    }
+
+    if (settlementAmount > 0) {
+      customerEntriesPayload.push({
+        owner_id: userId,
+        contact_id: contactId,
+        type: invoiceKind === 'sale' ? 'got' : 'gave',
+        amount: Number(settlementAmount.toFixed(2)),
+        note: `${invoiceKind === 'sale' ? 'Received' : 'Paid'} against invoice ${invoiceId}`,
+        entry_date: invoiceDate,
+      });
+    }
+
+    if (customerEntriesPayload.length > 0) {
+      const { error: entryError } = await supabase.from('entries').insert(customerEntriesPayload);
+      if (entryError) {
+        alert(entryError.message);
+        return;
+      }
+    }
+
+    setInvoiceLines([]);
+    setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
+    setInvoiceParty('');
+    setInvoiceNote('');
+    setInvoiceSettlementAmount('');
+    setInvoiceDate(new Date().toISOString().slice(0, 10));
+    setShowInvoiceForm(false);
+    await loadData(true);
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -862,7 +1128,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }
 
   const showFooter =
-    (section === 'dashboard' && !selectedContact) || (section === 'inventory' && !selectedInventoryItem);
+    section === 'invoices' ||
+    (section === 'dashboard' && !selectedContact) ||
+    (section === 'inventory' && !selectedInventoryItem);
 
   if (loading) {
     return (
@@ -1044,6 +1312,75 @@ export function Ledger({ userId, displayName }: LedgerProps) {
             </div>
           </section>
         )
+      ) : section === 'invoices' ? (
+        <section className="ledger-home inventory-home">
+          <div className="home-top inventory-top">
+            <div className="home-header-row">
+              <div className="brand-row">
+                <h2>Invoices</h2>
+              </div>
+              <button type="button" className="inventory-leave-btn" onClick={() => setShowInvoiceForm(true)}>
+                + New
+              </button>
+            </div>
+
+            <div className="summary-card inventory-summary-card">
+              <div className="summary-stats inventory-stats-three">
+                <div>
+                  <p className="muted">Type</p>
+                  <strong>{invoiceKind === 'purchase' ? 'Purchase' : 'Sales'}</strong>
+                </div>
+                <div>
+                  <p className="muted">Invoices</p>
+                  <strong>{invoiceHistory.length}</strong>
+                </div>
+                <div>
+                  <p className="muted">Lines</p>
+                  <strong>{invoiceHistory.reduce((sum, item) => sum + item.lineCount, 0)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="home-body with-footer-space">
+            <div className="invoice-kind-toggle">
+              <button
+                type="button"
+                className={invoiceKind === 'purchase' ? 'active' : ''}
+                onClick={() => setInvoiceKind('purchase')}
+              >
+                Purchases
+              </button>
+              <button
+                type="button"
+                className={invoiceKind === 'sale' ? 'active' : ''}
+                onClick={() => setInvoiceKind('sale')}
+              >
+                Sales
+              </button>
+            </div>
+
+            <div className="invoice-history-list">
+              {invoiceHistory.map((invoice) => (
+                <div key={invoice.id} className="invoice-history-card">
+                  <div>
+                    <strong>{invoice.id}</strong>
+                    <p className="muted">{invoice.party}</p>
+                  </div>
+                  <div className="invoice-history-meta">
+                    <p className="muted">{invoice.date}</p>
+                    <strong>₹{invoice.totalValue.toFixed(2)}</strong>
+                  </div>
+                </div>
+              ))}
+              {invoiceHistory.length === 0 && <p className="muted empty-text">No invoices yet.</p>}
+            </div>
+
+            <button className="fab-add with-footer" onClick={() => setShowInvoiceForm(true)}>
+              + New Invoice
+            </button>
+          </div>
+        </section>
       ) : inventoryView === 'group' ? (
         <section className="ledger-home inventory-home">
           <div className="home-top inventory-top">
@@ -1332,6 +1669,119 @@ export function Ledger({ userId, displayName }: LedgerProps) {
           >
             Inventories
           </button>
+          <button
+            type="button"
+            className={section === 'invoices' ? 'active' : ''}
+            onClick={() => {
+              setSelectedContactId('');
+              setSelectedInventoryItemId('');
+              setSection('invoices');
+            }}
+          >
+            Invoices
+          </button>
+        </div>
+      )}
+
+      {showInvoiceForm && (
+        <div className="entry-edit-overlay">
+          <form
+            className="entry-edit-modal stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveInvoice();
+            }}
+          >
+            <h4>{invoiceKind === 'purchase' ? 'New Purchase Invoice' : 'New Sales Invoice'}</h4>
+            <input
+              value={invoiceParty}
+              onChange={(e) => setInvoiceParty(e.target.value)}
+              placeholder={invoiceKind === 'purchase' ? 'Supplier name' : 'Customer name'}
+              autoCapitalize="words"
+            />
+            <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} required />
+            <input
+              value={invoiceNote}
+              onChange={(e) => setInvoiceNote(e.target.value)}
+              placeholder="Invoice note (optional)"
+            />
+            <input
+              value={invoiceSettlementAmount}
+              onChange={(e) => setInvoiceSettlementAmount(e.target.value)}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={invoiceKind === 'sale' ? 'Received amount (optional)' : 'Paid amount (optional)'}
+            />
+
+            <div className="invoice-line-row">
+              <select
+                value={invoiceLineDraft.item_id}
+                onChange={(e) => setInvoiceLineDraft((prev) => ({ ...prev, item_id: e.target.value }))}
+              >
+                <option value="">Select item</option>
+                {inventoryItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.unit ?? 'NOS'})
+                  </option>
+                ))}
+              </select>
+              <input
+                value={invoiceLineDraft.quantity}
+                onChange={(e) => setInvoiceLineDraft((prev) => ({ ...prev, quantity: e.target.value }))}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Qty"
+              />
+              <input
+                value={invoiceLineDraft.rate}
+                onChange={(e) => setInvoiceLineDraft((prev) => ({ ...prev, rate: e.target.value }))}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Rate"
+              />
+              <button type="button" onClick={() => addInvoiceLine()}>
+                Add
+              </button>
+            </div>
+
+            <div className="invoice-line-list">
+              {invoiceLines.map((line, index) => {
+                const item = inventoryItems.find((entry) => entry.id === line.item_id);
+                const qty = Number(line.quantity);
+                const rate = Number(line.rate);
+                return (
+                  <div key={`${line.item_id}-${index}`} className="invoice-line-item">
+                    <span>{item?.name ?? 'Unknown item'}</span>
+                    <span>
+                      {qty.toFixed(2)} x ₹{rate.toFixed(2)}
+                    </span>
+                    <button type="button" className="link" onClick={() => removeInvoiceLine(index)}>
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="row">
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setShowInvoiceForm(false);
+                  setInvoiceLines([]);
+                  setInvoiceLineDraft({ item_id: '', quantity: '', rate: '' });
+                  setInvoiceSettlementAmount('');
+                }}
+              >
+                Cancel
+              </button>
+              <button type="submit">Save Invoice</button>
+            </div>
+          </form>
         </div>
       )}
 
