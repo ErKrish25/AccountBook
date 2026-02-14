@@ -53,6 +53,24 @@ const INVENTORY_UNITS = [
   'TON',
 ];
 
+const INVENTORY_CATEGORIES = [
+  'Crops & Produce',
+  'Seeds',
+  'Fertilizers',
+  'Pesticides',
+  'Equipment & Tools',
+  'Irrigation Supplies',
+  'Fuel & Consumables',
+  'Packaging & Storage',
+  'Spare Parts',
+  'Raw Materials',
+  'Soil Conditioners',
+  'Animal Feed',
+  'Nursery & Saplings',
+  'Harvest Supplies',
+  'Post-Harvest Inputs',
+];
+
 export function Ledger({ userId, displayName }: LedgerProps) {
   const [section, setSection] = useState<AppSection>('dashboard');
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -89,6 +107,8 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   });
   const [showAddPartyForm, setShowAddPartyForm] = useState(false);
   const [showAddInventoryForm, setShowAddInventoryForm] = useState(false);
+  const [inventoryCategoryCustom, setInventoryCategoryCustom] = useState('');
+  const [editInventoryCategoryCustom, setEditInventoryCategoryCustom] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<
     | { kind: 'contact'; id: string; name: string }
@@ -234,9 +254,23 @@ export function Ledger({ userId, displayName }: LedgerProps) {
   }, [inventoryItemsWithStock, inventorySearchText, inventoryCategoryFilter]);
 
   const inventoryCategories = useMemo(() => {
-    return [...new Set(inventoryItems.map((item) => (item.category ?? '').trim()).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b)
+    const existing = new Set(
+      inventoryItems
+        .map((item) => (item.category ?? '').trim())
+        .filter(Boolean)
     );
+    const ordered: string[] = [];
+    for (const category of INVENTORY_CATEGORIES) {
+      if (existing.has(category)) {
+        ordered.push(category);
+        existing.delete(category);
+      } else {
+        ordered.push(category);
+      }
+    }
+
+    const extras = [...existing].sort((a, b) => a.localeCompare(b));
+    return [...ordered, ...extras];
   }, [inventoryItems]);
 
   const inventoryTotals = useMemo(() => {
@@ -655,13 +689,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       alert('Item name is required');
       return;
     }
+    const resolvedCategory =
+      inventoryItemDraft.category === '__custom__'
+        ? inventoryCategoryCustom.trim()
+        : inventoryItemDraft.category.trim();
 
     const { error } = await supabase.from('inventory_items').insert({
       owner_id: userId,
       group_id: activeInventoryGroup?.id ?? null,
       name: trimmedName,
       unit: inventoryItemDraft.unit.trim().toUpperCase() || null,
-      category: inventoryItemDraft.category.trim() || null,
+      category: resolvedCategory || null,
     });
 
     if (error) {
@@ -670,6 +708,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
     }
 
     setInventoryItemDraft({ name: '', unit: 'NOS', category: '' });
+    setInventoryCategoryCustom('');
     setShowAddInventoryForm(false);
     await loadData(true);
   }
@@ -1068,6 +1107,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       unit: selectedInventoryItem.unit ?? 'NOS',
       category: selectedInventoryItem.category ?? '',
     });
+    setEditInventoryCategoryCustom('');
   }
 
   async function saveEditedInventoryItem() {
@@ -1078,13 +1118,17 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       alert('Item name cannot be empty');
       return;
     }
+    const resolvedCategory =
+      editInventoryItemDraft.category === '__custom__'
+        ? editInventoryCategoryCustom.trim()
+        : editInventoryItemDraft.category.trim();
 
     const { error } = await supabase
       .from('inventory_items')
       .update({
         name: trimmedName,
         unit: editInventoryItemDraft.unit.trim().toUpperCase() || null,
-        category: editInventoryItemDraft.category.trim() || null,
+        category: resolvedCategory || null,
       })
       .eq('id', editInventoryItemDraft.id);
 
@@ -1093,6 +1137,7 @@ export function Ledger({ userId, displayName }: LedgerProps) {
       return;
     }
 
+    setEditInventoryCategoryCustom('');
     setEditInventoryItemDraft(null);
     await loadData(true);
   }
@@ -1735,16 +1780,39 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                       </option>
                     ))}
                   </select>
-                  <input
+                  <select
                     value={inventoryItemDraft.category}
                     onChange={(e) =>
                       setInventoryItemDraft((draft) => ({ ...draft, category: e.target.value }))
                     }
-                    placeholder="Category (e.g., Fertilizer)"
-                    autoCapitalize="words"
-                  />
+                  >
+                    <option value="">Select Category</option>
+                    {inventoryCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                    <option value="__custom__">+ Add New Category</option>
+                  </select>
+                  {inventoryItemDraft.category === '__custom__' && (
+                    <input
+                      value={inventoryCategoryCustom}
+                      onChange={(e) => setInventoryCategoryCustom(e.target.value)}
+                      placeholder="Type new category"
+                      autoCapitalize="words"
+                      required
+                    />
+                  )}
                   <div className="row">
-                    <button type="button" className="add-party-cancel-btn" onClick={() => setShowAddInventoryForm(false)}>
+                    <button
+                      type="button"
+                      className="add-party-cancel-btn"
+                      onClick={() => {
+                        setShowAddInventoryForm(false);
+                        setInventoryCategoryCustom('');
+                        setInventoryItemDraft((draft) => ({ ...draft, category: '' }));
+                      }}
+                    >
                       Cancel
                     </button>
                     <button type="submit" className="add-party-save-btn">
@@ -2323,18 +2391,40 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 </option>
               ))}
             </select>
-            <input
+            <select
               value={editInventoryItemDraft.category}
               onChange={(e) =>
                 setEditInventoryItemDraft((draft) =>
                   draft ? { ...draft, category: e.target.value } : draft
                 )
               }
-              placeholder="Category (e.g., Fertilizer)"
-              autoCapitalize="words"
-            />
+            >
+              <option value="">Select Category</option>
+              {inventoryCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+              <option value="__custom__">+ Add New Category</option>
+            </select>
+            {editInventoryItemDraft.category === '__custom__' && (
+              <input
+                value={editInventoryCategoryCustom}
+                onChange={(e) => setEditInventoryCategoryCustom(e.target.value)}
+                placeholder="Type new category"
+                autoCapitalize="words"
+                required
+              />
+            )}
             <div className="row">
-              <button type="button" className="link" onClick={() => setEditInventoryItemDraft(null)}>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setEditInventoryCategoryCustom('');
+                  setEditInventoryItemDraft(null);
+                }}
+              >
                 Cancel
               </button>
               <button type="submit">Save</button>
