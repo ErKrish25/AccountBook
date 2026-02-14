@@ -1724,7 +1724,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                     }
                   >
                     {INVENTORY_UNITS.map((unit) => (
-                      <option key={unit} value={unit} />
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
                     ))}
                   </select>
                   <input
@@ -2310,7 +2312,9 @@ export function Ledger({ userId, displayName }: LedgerProps) {
                 <option value={editInventoryItemDraft.unit}>{editInventoryItemDraft.unit}</option>
               )}
               {INVENTORY_UNITS.map((unit) => (
-                <option key={unit} value={unit} />
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
               ))}
             </select>
             <input
